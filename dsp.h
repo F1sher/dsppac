@@ -30,7 +30,7 @@ extern double CFT_fraction;
 
 int init_controller(cyusb_handle **usb_h);
 
-int **read_data_ep(cyusb_handle *usb_h);
+int **read_data_ep(cyusb_handle *usb_h, int **data);
 
 double area_signal(int *a);
 void min_bubble(int *a, int len, int *min, int *min_num);

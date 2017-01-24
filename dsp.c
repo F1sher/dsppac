@@ -93,7 +93,7 @@ void swap_int(int *a, int *b)
 	*a = temp;
 }
 
-int **read_data_ep(cyusb_handle *usb_h)
+int **read_data_ep(cyusb_handle *usb_h, int **data)
 {
 	int i = 0;
 	int j = 0;
@@ -101,39 +101,49 @@ int **read_data_ep(cyusb_handle *usb_h)
 	int trans = 0;
 	int det_num = -1;
 	unsigned char buf[SIZEOF_DATA_EP] = {0};
-	int **data = NULL;
 
 	//remove after tests
+	#ifdef DEBUG
 	int test_cntrl = 0;
+	#endif
 
 	//...malloc data...
-	data = (int **)calloc(4, sizeof(int *));
 	if (data == NULL) {
-		fprintf(stderr, "Error in memory allocation for int **data\n");
-		return NULL;
-	}
+		fprintf(stdin, "malloc int **data\n");
 
-	for (i = 0; i < 4; i++) {
-		data[i] = (int *)calloc(SIZEOF_SIGNAL, sizeof(int));
-		if (data[i] == NULL) {
-			for (j = 0; j < i; j++) {
-				free(data[j]); data[j] = NULL;
-			}
-			free(data); data = NULL;
-	
-			fprintf(stderr, "Error in memory allocationt for int *data[%d]\n", i);
+		data = (int **)calloc(4, sizeof(int *));
+		if (data == NULL) {
+			fprintf(stderr, "Error in memory allocation for int **data\n");
 			return NULL;
+		}
+
+		for (i = 0; i < 4; i++) {
+			data[i] = (int *)calloc(SIZEOF_SIGNAL, sizeof(int));
+			if (data[i] == NULL) {
+				for (j = 0; j < i; j++) {
+					free(data[j]); data[j] = NULL;
+				}
+				free(data); data = NULL;
+	
+				fprintf(stderr, "Error in memory allocationt for int *data[%d]\n", i);
+				return NULL;
+			}
 		}
 	}
 	//...check malloc errors...
 
 	while ( (res = control_test(usb_h, CONTROL_REQUEST_TYPE_IN)) != 1 ) {
+		#ifdef DEBUG
 		test_cntrl++;
+		#endif
+
 		;
 	}
+	#ifdef DEBUG
 	if (test_cntrl != 0) {
 		printf("test_cntrl = %d\n", test_cntrl);
 	}
+	#endif
 
 	res = cyusb_bulk_transfer(usb_h, IN_EP, buf, SIZEOF_DATA_EP, &trans, 0);
 	if (res != 0) {
