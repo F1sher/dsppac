@@ -14,5 +14,9 @@ main_test_1: $(DEPS) ../main_test_1.c $(UNITY_SRC)
 drainer: $(DEPS) ../drainer.c
 	$(CC) -o $@ ../drainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
+hdrainer: $(DEPS) ../hdrainer.c
+	$(CC) -o $@ ../hdrainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
+
+
 clean:
 	rm ./*.o

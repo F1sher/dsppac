@@ -8,6 +8,11 @@ static const int SIZEOF_DATA_EP = 2048;
 const int SIZEOF_SIGNAL = 256;
 static const int CONTROL_REQUEST_TYPE_IN = LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE;
 
+const int CALC_SIZE = 100000;
+const int HIST_SIZE = 4096;
+const double T_SCALE[2] = {100.0, 10.0};
+const int EN_THRESHOLD = 10;
+
 double Tau_trap = 0.95;
 unsigned int K_trap = 4;
 unsigned int L_trap = 16;
@@ -74,6 +79,128 @@ int init_controller(cyusb_handle **usb_h)
 	return 0;
 }
 
+int exit_controller(cyusb_handle *usb_h)
+{
+	cyusb_close();
+
+	return 0;
+}
+
+int control_send_comm(cyusb_handle *usb_h, const char *command, int args) 
+{
+	int ret = 0;
+	int transferred = 0;
+	unsigned char buf[512];
+	
+	//word #1 = 1; word #2 = porog - установка порога
+	//word #1 = 3; word #2 = 1 - сброс (reset)
+	//word #1 = 2; word #2 = задержка - установка задержки
+	//word #1 = 5; word #2 = 5 - test
+    
+    //new
+    //word #1 = 1; word #2 = porog - установка порога D1
+    //word #1 = 2; -||- D2
+    //word #1 = 3; -||- D3
+    //word #1 = 4; -||- D4
+    //word #1 = 5; word #2 = 1/2 ON/OFF coinc
+    //word #1 = 6; word #2 = window - Coinc's window
+    //word #1 = 7; word #2 = 1 - сброс (reset)
+	
+	if (!strcmp(command, "s0") || !strcmp(command, "s1") || !strcmp(command, "s2") || !strcmp(command, "s3")) {
+        buf[0] = (unsigned char)(command[1] - '0') + 1;
+        buf[2] = args - 256*(args/256);
+        buf[3] = args/256;
+        
+        printf("command = %s rangeset buf[0] = %u buf[2] = %u buf[3] = %u args = %d\n", command, buf[0], buf[2], buf[3], args);
+        
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        if (ret != 0) {
+            cyusb_error(ret);
+            cyusb_close();
+			perror("Error in set range comm");
+            fprintf(stderr, "transferred %d bytes while should be 512\n", transferred);
+
+			return -1;
+        }
+    }
+    else if (!strcmp(command, "r")) {
+        buf[0] = 7;
+        buf[2] = 1;
+        
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        if (ret != 0) {
+            cyusb_error(ret);
+            cyusb_close();
+            perror("Error in reset comm");
+
+			return -1;
+        }
+        printf("reset\n");
+	}
+    else if (!strcmp(command, "w")) {
+        buf[0] = 6;
+        buf[2] = args - 256*(args/256);
+        buf[3] = args/256;
+			
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        if (ret != 0) {
+            cyusb_error(ret);
+            cyusb_close();
+            perror("Error in set delay comm");
+        
+			return -1;
+		}
+
+        printf("wait %u\n", args);
+	}
+    else if (!strcmp(command, "t")) {
+        buf[0] = 1;
+        buf[2] = 5;
+        
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        if (ret != 0) {
+            cyusb_error(ret);
+            cyusb_close();
+            perror("Error in test comm");
+        
+			return -1;
+		}
+			
+        printf("test\n");
+	}
+    else if (!strcmp(command, "c")) {
+        buf[0] = 5;
+        buf[2] = 1;
+        
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        if (ret != 0) {
+            cyusb_error(ret);
+            cyusb_close();
+            perror("Error in coinc ON comm");
+        
+			return -1;
+		}
+			
+        printf("coinc on\n");
+	}
+    else if (!strcmp(command, "n")) {
+        buf[0] = 5;
+        buf[2] = 2;
+			
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        if (ret != 0) {
+            cyusb_error(ret);
+            cyusb_close();
+            perror("Error in coinc OFF comm");
+        
+			return -1;
+		}
+
+        printf("coinc off\n");
+	}
+
+	return 0;
+}
 
 ///FUNCTIONS FOR READ DATA from ENDPOINT
 int control_test(cyusb_handle *usb_h, unsigned char bmRequestType)
@@ -149,6 +276,7 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	if (res != 0) {
 		if (trans != SIZEOF_DATA_EP) {
 			//ERROR in TRANSFER SIZE OF DATA
+			;
 		}
 		cyusb_error(res);
 		//...
@@ -175,7 +303,7 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 
 //FUNCTIONS FOR CALC EN and T for SIGNALS
 
-double area_signal(int *a)
+double area_trap_signal(int *a)
 {
     const int Averaging = 10;
     int i = 0;
@@ -281,7 +409,7 @@ void min_bubble(int *a, int len, int *min, int *min_num)
 	}
 } 
 
-double time_signal(int *a)
+double time_line_signal(int *a)
 {
 	int i = 0;
    
@@ -424,4 +552,199 @@ int save_data_in_file(const int out_fd, int **data)
 	}
 	
 	return 0;
+}
+
+
+int b_definitely_greater_a(double a, double b) 
+{
+    return (b - a) > ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a))*EPS );
+}
+
+int calc_histo(einfo_t *events, const int **en_range, unsigned int **histo_en, unsigned int **start)
+{
+	int i, j;
+	int n1 = 0;
+	int n2 = 0;
+	int s1 = 0;
+	int s2 = 0;
+	double diff_time = 0.0;
+	int dtime = 0;
+	const double c = 2.0*T_SCALE[0]*T_SCALE[1]/HIST_SIZE;
+
+	for (i = 0; i < CALC_SIZE; i++) { 
+		n1 = events[i].det;
+		n2 = events[i+1].det;
+
+		if ( (n1 < 1) || (n1 > 4) ) {
+			continue;
+		}
+		if ( (n2 < 1) || (n2 > 4) ) {
+			continue;
+		}
+
+		s1 = (int)events[i].en;
+		s2 = (int)events[i+1].en;
+
+		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) ) {
+			histo_en[n1-1][s1]++;
+		}
+		if ( (s2 >= EN_THRESHOLD) && (s2 < HIST_SIZE) ) {
+			histo_en[n2-1][s2]++;
+		}
+
+		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) && (s2 >= EN_THRESHOLD) && (s2 < HIST_SIZE) ) {
+			diff_time = T_SCALE[0]*(events[i].t - events[i+1].t) + T_SCALE[0]*T_SCALE[1];
+			dtime = 0;
+			for (j = 0; j < HIST_SIZE - 1; j++) {
+				if ( b_definitely_greater_a(j*c, diff_time) && b_definitely_greater_a(diff_time, (j + 1)*c) ) {
+					dtime = j;
+					break;
+				}
+			}
+                    	
+			if ( (n1 == 1) && (n2 == 2) ) {
+				if ( (s1 >= en_range[0][0]) && (s1 <= en_range[0][1]) && (s2 >= en_range[1][2]) && (s2 <= en_range[1][3]) ) {
+					start[0][dtime]++; //T12
+				}
+				else if ( (s1 >= en_range[0][2]) && (s1 <= en_range[0][3]) && (s2 >= en_range[1][0]) && (s2 <= en_range[1][1]) ) {
+					start[1][dtime]++; // T21
+				}
+			}
+			else if ( (n1 == 1) && (n2 == 3) ) {
+				if ( (s1 >= en_range[0][0]) && (s1 <= en_range[0][1]) && (s2 >= en_range[2][2]) && (s2 <= en_range[2][3]) ) {
+					start[2][dtime]++; //T13
+				}
+				else if ( (s1 >= en_range[0][2]) && (s1 <= en_range[0][3]) && (s2 >= en_range[2][0]) && (s2 <= en_range[2][1]) ) {
+					start[3][dtime]++; //T31
+				}
+			}
+			else if ( (n1 == 1) && (n2 == 4) ) {
+				if ( (s1 >= en_range[0][0]) && (s1 <= en_range[0][1]) && (s2 >= en_range[3][2]) && (s2 <= en_range[3][3]) ) {
+					start[4][dtime]++; //T14
+				}
+				else if ( (s1 >= en_range[0][2]) && (s1 <= en_range[0][3]) && (s2 >= en_range[3][0]) && (s2 <= en_range[3][1]) ) {
+					start[5][dtime]++; //T41
+				}
+			}
+			else if ( (n1 == 2) && (n2 == 3) ) {
+				if ( (s1 >= en_range[1][0]) && (s1 <= en_range[1][1]) && (s2 >= en_range[2][2]) && (s2 <= en_range[2][3]) ) {
+					start[6][dtime]++; //T23
+				}
+				else if ( (s1 >= en_range[1][2]) && (s1 <= en_range[1][3]) && (s2 >= en_range[2][0]) && (s2 <= en_range[2][1]) ) {
+					start[7][dtime]++; //T32
+				}
+			}
+			else if ( (n1 == 2) && (n2 == 4) ) {
+				if ((s1 >= en_range[1][0]) && (s1 <= en_range[1][1]) && (s2 >= en_range[3][2]) && (s2 <= en_range[3][3]) ) {
+					start[8][dtime]++; //T24
+				}
+				else if ( (s1 >= en_range[1][2]) && (s1 <= en_range[1][3]) && (s2 >= en_range[3][0]) && (s2 <= en_range[3][1]) ) {
+					start[9][dtime]++; //T42
+				}
+			}
+			else if ( (n1 == 3) && (n2 == 4) ) {
+				if ( (s1 >= en_range[2][0]) && (s1 <= en_range[2][1]) && (s2 >= en_range[3][2]) && (s2 <= en_range[3][3]) ) {
+					start[10][dtime]++; //T34
+				}
+				else if ( (s1 >= en_range[2][2]) && (s1 <= en_range[2][3]) && (s2 >= en_range[3][0]) && (s2 <= en_range[3][1]) ) {
+					start[11][dtime]++; //T43
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+int alloc_mem_data(int ***data)
+{
+	int i, j;
+
+	if (*data != NULL) {
+		return -1;
+	}
+
+	*data = (int **)calloc(4, sizeof(int *));
+	if (*data == NULL) {
+		fprintf(stderr, "Error in memory allocation for int **data\n");
+		return -1;
+	}
+	
+	for (i = 0; i < 4; i++) {
+		(*data)[i] = (int *)calloc(SIZEOF_SIGNAL, sizeof(int));
+		if ((*data)[i] == NULL) {
+			for (j = 0; j < i; j++) {
+				free((*data)[j]); (*data)[j] = NULL;
+			}
+			free(*data); *data = NULL;
+			
+			fprintf(stderr, "Error in memory allocation for int *data[%d]\n", i);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+void free_mem_data(int ***data)
+{
+	int i;
+
+	if (data == NULL) {
+		return ;
+	}
+
+	for (i = 0; i < 4; i++) {
+		if ((*data)[i] == NULL) {
+			return ;
+		}
+
+		free((*data)[i]); (*data)[i] = NULL;
+	}
+	free(*data); *data = NULL;
+}
+
+int alloc_mem_events(einfo_t ***events)
+{
+	int i, j;
+
+	if (*events != NULL) {
+		return -1;
+	}
+
+	*events = (einfo_t **)calloc(CALC_SIZE, sizeof(einfo_t *));
+	if (*events == NULL) {
+		return -1;
+	}
+
+	for (i = 0; i < CALC_SIZE; i++) {
+		(*events)[i] = (einfo_t *)malloc(sizeof(einfo_t));
+		if ((*events)[i] == NULL) {
+			for (j = 0; j < i; j++) {
+				free((*events)[j]); (*events)[j] = NULL;
+			}
+			free(*events); *events = NULL;
+
+			fprintf(stderr, "Error in memory allocation for int *events[%d]\n", i);
+
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+void free_mem_events(einfo_t ***events)
+{
+	int i;
+
+	if (*events == NULL) {
+		return ;
+	}
+
+	for (i = 0; i < CALC_SIZE; i++) {
+		free((*events)[i]); (*events)[i] = NULL;
+	}
+	free(*events); *events = NULL;
 }
