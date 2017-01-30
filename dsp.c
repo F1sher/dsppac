@@ -16,7 +16,9 @@ const int EN_THRESHOLD = 10;
 double Tau_trap = 0.95;
 unsigned int K_trap = 4;
 unsigned int L_trap = 16;
-double EN_normal = 1000.0;
+int INTEGRAL_steps_back = 10;
+int INTEGRAL_steps_forw = 20;
+double EN_normal = 4096.0/2000.0;
 double CFT_fraction = 0.5;
 
 static int flag_fifo_wr = 1;
@@ -226,7 +228,8 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	int j = 0;
 	int res = 0;
 	int trans = 0;
-	int det_num = -1;
+	int det_num = 0;
+	int det_counts = 0;
 	unsigned char buf[SIZEOF_DATA_EP] = {0};
 
 	//remove after tests
@@ -285,7 +288,10 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 
 	for (i = 0; i < 4; i++) {
 		det_num = (buf[2*SIZEOF_SIGNAL*(i + 1) - 1] >> 6) + 1;
-		
+		//counter
+		//det_counts = (buf[2*SIZEOF_SIGNAL*(i)] << 24)  + (buf[2*SIZEOF_SIGNAL*(i) + 1] << 16) + (buf[2*SIZEOF_SIGNAL*(i) + 2] << 8) + buf[2*SIZEOF_SIGNAL*(i) + 3];
+		det_counts = 8000;
+
 		for (j = 0; j < SIZEOF_SIGNAL; j++) {
 			data[i][j] = buf[2*SIZEOF_SIGNAL*i + 2*j] + 256*(buf[2*SIZEOF_SIGNAL*i + 2*j + 1] & 0b00111111);
 		}
@@ -294,7 +300,11 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 			swap_int( &(data[i][j]), &(data[i][SIZEOF_SIGNAL - j - 1]) );
 		}
 
+		//save DET NUMBER
 		data[i][SIZEOF_SIGNAL - 1] = det_num;
+	
+		//save COUNTS in DET
+		data[i][SIZEOF_SIGNAL - 2] = det_counts;
 	}
 
 	return data;
@@ -386,6 +396,35 @@ double area_trap_signal(int *a)
     free(cs); cs = NULL;
     
     return fabs(res*EN_normal);
+}
+
+double area_integral(int *a)
+{
+	int i;
+	double baseline = 0.0;
+	int min_signal_num = 0;
+	double temp = 0.0;
+	double res = 0.0;
+
+	for (i = 0; i < 10; i++) {
+		baseline += (double)a[i];
+	}
+	baseline /= 10.0;
+
+	min_bubble(a, SIZEOF_SIGNAL/2, NULL, &min_signal_num);
+	if (min_signal_num - INTEGRAL_steps_back < 0) {
+		return -1.0;
+	}
+
+	for (i = min_signal_num - INTEGRAL_steps_back; i < min_signal_num + INTEGRAL_steps_forw; i++) {
+		if ((temp = a[i] - baseline) < EPS) {
+			res += temp;
+		}
+	}
+	
+	res /= (double)(INTEGRAL_steps_forw + INTEGRAL_steps_back);
+
+	return fabs(res*EN_normal);
 }
 
 void min_bubble(int *a, int len, int *min, int *min_num)
@@ -560,7 +599,7 @@ int b_definitely_greater_a(double a, double b)
     return (b - a) > ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a))*EPS );
 }
 
-int calc_histo(einfo_t *events, const int **en_range, unsigned int **histo_en, unsigned int **start)
+int calc_histo(einfo_t **events, const int en_range[][4], unsigned int **histo_en, unsigned int **start)
 {
 	int i, j;
 	int n1 = 0;
@@ -571,9 +610,9 @@ int calc_histo(einfo_t *events, const int **en_range, unsigned int **histo_en, u
 	int dtime = 0;
 	const double c = 2.0*T_SCALE[0]*T_SCALE[1]/HIST_SIZE;
 
-	for (i = 0; i < CALC_SIZE; i++) { 
-		n1 = events[i].det;
-		n2 = events[i+1].det;
+	for (i = 0; i < CALC_SIZE - 1; i++) { 
+		n1 = events[i]->det;
+		n2 = events[i+1]->det;
 
 		if ( (n1 < 1) || (n1 > 4) ) {
 			continue;
@@ -582,8 +621,8 @@ int calc_histo(einfo_t *events, const int **en_range, unsigned int **histo_en, u
 			continue;
 		}
 
-		s1 = (int)events[i].en;
-		s2 = (int)events[i+1].en;
+		s1 = (int)events[i]->en;
+		s2 = (int)events[i+1]->en;
 
 		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) ) {
 			histo_en[n1-1][s1]++;
@@ -593,7 +632,7 @@ int calc_histo(einfo_t *events, const int **en_range, unsigned int **histo_en, u
 		}
 
 		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) && (s2 >= EN_THRESHOLD) && (s2 < HIST_SIZE) ) {
-			diff_time = T_SCALE[0]*(events[i].t - events[i+1].t) + T_SCALE[0]*T_SCALE[1];
+			diff_time = T_SCALE[0]*(events[i]->t - events[i+1]->t) + T_SCALE[0]*T_SCALE[1];
 			dtime = 0;
 			for (j = 0; j < HIST_SIZE - 1; j++) {
 				if ( b_definitely_greater_a(j*c, diff_time) && b_definitely_greater_a(diff_time, (j + 1)*c) ) {
@@ -650,6 +689,48 @@ int calc_histo(einfo_t *events, const int **en_range, unsigned int **histo_en, u
 					start[11][dtime]++; //T43
 				}
 			}
+		}
+	}
+
+	return 0;
+}
+
+int save_histo_in_file(const int *out_fd, unsigned int **histo_en, unsigned int **start)
+{
+	int i;
+	int res = 0;
+
+	for (i = 0; i < 16; i++) {
+		if (out_fd[i] == -1) {
+			#ifdef DEBUG
+			fprintf(stderr, "Error in file descriptor #%d\n", out_fd[i]);
+			#endif
+
+			return -1;
+		}
+	}
+	
+	for (i = 0; i < 4; i++) {
+		lseek(out_fd[i], 512, 0);
+		res = write(out_fd[i], histo_en[i], HIST_SIZE*sizeof(unsigned int));
+		if (res != HIST_SIZE*sizeof(unsigned int)) {
+			#ifdef DEBUG
+			perror();
+			#endif
+
+			return -1;
+		}
+	}
+
+	for (i = 4; i < 16; i++) {
+		lseek(out_fd[i], 512, 0);
+		res = write(out_fd[i], start[i - 4], HIST_SIZE*sizeof(unsigned int));
+		if (res != HIST_SIZE*sizeof(unsigned int)) {
+			#ifdef DEBUG
+			perror();
+			#endif
+
+			return -1;
 		}
 	}
 
