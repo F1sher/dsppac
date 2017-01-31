@@ -695,6 +695,84 @@ int calc_histo(einfo_t **events, const int en_range[][4], unsigned int **histo_e
 	return 0;
 }
 
+
+int *open_files_for_histo(const char *foldername)
+{
+	int i;
+	int ret = 0;
+	struct stat st = {0};
+	char *tempstr = (char *)calloc(512, sizeof(char));
+	if (tempstr == NULL) {
+		return NULL;
+	}
+	int *out_fd = (int *)calloc(16, sizeof(int));
+
+	if ( (foldername == NULL) || strlen(foldername) == 0 ) {
+		return NULL;
+	}
+	
+	ret = stat(foldername, &st);
+    if (ret == -1) {
+		#ifdef DEBUG
+		fprintf(stderr, "stat(%s) returns -1\n", foldername);
+		#endif
+        ret = mkdir(foldername, 0777);
+		if (ret == -1) {
+			perror("");
+			free(out_fd); out_fd = NULL;
+			free(tempstr); tempstr = NULL;
+
+			return NULL;
+		}
+    }
+
+	for (i = 0; i < 4; i++) {
+		sprintf(tempstr, "%s/BUFKA%d.SPK", foldername, i + 1);
+		out_fd[i] = open(tempstr, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		if (out_fd[i] == -1) {
+			free(out_fd); out_fd = NULL;
+			free(tempstr); tempstr = NULL;
+
+			perror("Error in open file for BUFKA");
+
+			return NULL;
+		}
+		strncpy(tempstr, "", 512);
+	}
+
+	for (i = 0; i < 12; i++) {
+		sprintf(tempstr, "%s/TIME%d.SPK", foldername, i + 1);
+		out_fd[i + 4] = open(tempstr, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		if (out_fd[i + 4] == -1) {
+			free(out_fd); out_fd = NULL;
+			free(tempstr); tempstr = NULL;
+
+			perror("Error in open file for TIME");
+
+			return NULL;
+		}
+		strncpy(tempstr, "", 512);		
+	}
+
+	free(tempstr); tempstr = NULL;
+
+	return out_fd;
+}
+
+void close_files_for_histo(int **out_histo_fd)
+{
+	int i;
+
+	if (*out_histo_fd == NULL) {
+		return ;
+	}
+	
+	for (i = 0; i < 16; i++) {
+		close((*out_histo_fd)[i]);
+	}
+	free(*out_histo_fd); *out_histo_fd = NULL;
+}
+
 int save_histo_in_file(const int *out_fd, unsigned int **histo_en, unsigned int **start)
 {
 	int i;
@@ -733,6 +811,79 @@ int save_histo_in_file(const int *out_fd, unsigned int **histo_en, unsigned int 
 			return -1;
 		}
 	}
+
+	return 0;
+}
+
+int save_histo_in_ascii(const char *foldername, unsigned int **histo_en, unsigned int **start)
+{
+	int i, j;
+	int ret = 0;
+	struct stat st = {0};
+	FILE *out_file[16];
+	char *tempstr = (char *)calloc(512, sizeof(char));
+	if (tempstr == NULL) {
+		return -1;
+	}
+
+	if ( (foldername == NULL) || strlen(foldername) == 0 ) {
+		return -1;
+	}
+	
+	ret = stat(foldername, &st);
+    if (ret == -1) {
+		#ifdef DEBUG
+		fprintf(stderr, "stat(%s) returns -1\n", foldername);
+		#endif
+        ret = mkdir(foldername, 0777);
+		if (ret == -1) {
+			perror("");
+			free(tempstr); tempstr = NULL;
+
+			return -1;
+		}
+    }
+
+	for (i = 0; i < 4; i++) {
+		sprintf(tempstr, "%s/en%d", foldername, i);
+		out_file[i] = fopen(tempstr, "w+");
+		if (out_file[i] == NULL) {
+			perror("");
+			free(tempstr); tempstr = NULL;
+
+			return -1;
+		}
+		strncpy(tempstr, "", 512);
+	}
+
+	for (i = 4; i < 16; i++) {
+		sprintf(tempstr, "%s/t%d", foldername, i - 4);
+		out_file[i] = fopen(tempstr, "w+");
+		if (out_file[i] == NULL) {
+			perror("");
+			free(tempstr); tempstr = NULL;
+
+			return -1;
+		}
+		strncpy(tempstr, "", 512);
+	}
+
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < HIST_SIZE; j++) {
+			fprintf(out_file[i], "%d %u\n", j, histo_en[i][j]);
+		}
+	}
+
+	for (i = 4; i < 16; i++) {
+		for (j = 0; j < HIST_SIZE; j++) {
+			fprintf(out_file[i], "%d %u\n", j, start[i - 4][j]);
+		}
+	}
+
+	for (i = 0; i < 16; i++) {
+		fclose(out_file[i]);
+	}
+	free(tempstr); tempstr = NULL;
 
 	return 0;
 }
@@ -828,4 +979,82 @@ void free_mem_events(einfo_t ***events)
 		free((*events)[i]); (*events)[i] = NULL;
 	}
 	free(*events); *events = NULL;
+}
+
+int alloc_mem_histo(unsigned int ***histo_en, unsigned int ***start)
+{
+	int i, j;
+
+	if ( (*histo_en != NULL) || (*start != NULL) ) {
+		return -1;
+	}
+
+	*histo_en = (unsigned int **)calloc(4, sizeof(unsigned int *));
+	if (*histo_en == NULL) {
+		fprintf(stderr, "Error in memory allocation for **histo_en\n");
+
+		return -1;
+	}
+	for (i = 0; i < 4; i++) {
+		(*histo_en)[i] = (unsigned int *)calloc(HIST_SIZE, sizeof(unsigned int));
+		if ((*histo_en)[i] == NULL) {
+			for (j = 0; j < i; j++) {
+				free((*histo_en)[j]); (*histo_en)[j] = NULL;
+			}
+			free(*histo_en); *histo_en = NULL;
+
+			return -1;
+		}
+	}
+
+	*start = (unsigned int **)calloc(12, sizeof(unsigned int *));
+	if (*start == NULL) {
+		for (j = 0; j < 4; j++) {
+			free((*histo_en)[j]); (*histo_en)[j] = NULL;
+		}
+		free(*histo_en); *histo_en = NULL;
+
+		fprintf(stderr, "Error in memory allocation for **start\n");
+		
+		return -1;
+	}
+	for (i = 0; i < 12; i++) {
+		(*start)[i] = (unsigned int *)calloc(HIST_SIZE, sizeof(unsigned int));
+		if ((*start)[i] == NULL) {
+			for (j = 0; j < 4; j++) {
+				free((*histo_en)[j]); (*histo_en)[j] = NULL;
+			}
+			free(*histo_en); *histo_en = NULL;
+
+			for (j = 0; j < i; j++) {
+				free((*start)[j]); (*start)[j] = NULL;
+			}
+			free(*start); *start = NULL;
+
+			fprintf(stderr, "Error in memory allocation for *start[%d]\n", i);
+
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+void free_mem_histo(unsigned int ***histo_en, unsigned int ***start)
+{
+	int i;
+
+	if (*histo_en != NULL) {
+		for (i = 0; i < 4; i++) {
+			free((*histo_en)[i]); (*histo_en)[i] = NULL;
+		}
+		free(*histo_en); *histo_en = NULL;
+	}
+
+	if (*start != NULL) {
+		for (i = 0; i < 12; i++) {
+			free((*start)[i]); (*start)[i] = NULL;
+		}
+		free(*start); *start = NULL;
+	}
 }
