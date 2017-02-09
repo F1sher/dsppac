@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "dsp.h"
 
 volatile int read_cycle_flag = 1;
-const char *HDrainer_res_file = "../test/hdrainer_res";
-const int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
+const char *OConsumer_res_file = "../test/oconsumer_res";
+const int en_range[4][4] = {{30, 200, 30, 200}, {30, 200, 30, 200}, {30, 200, 30, 200}, {30, 200, 30, 200}};
 
 
 void catch_alarm(int sig_num)
@@ -19,7 +20,7 @@ const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h)
 {
 	int i;
 	int option = 0;
-	int time = 10;
+	int time = 100;
 	const char *out_foldername = "../test/histos";
 	unsigned int p[4] = {100, 100, 100, 100};
 	char porogs[512];
@@ -27,6 +28,12 @@ const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h)
 	char *token = NULL;
 	int delay = 100;
 	int coinc_flag = 1;
+
+	if (argc == 1) {
+		alarm(time);
+
+		return out_foldername;
+	}
 
 	while ( (option = getopt (argc, argv, "t:o:p:d:n") ) != -1) {
 		switch (option) {
@@ -72,16 +79,18 @@ const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h)
 	}
 	
 	control_send_comm(usb_h, "s0", p[0]);
-	usleep(1000);
+	usleep(100000);
 	control_send_comm(usb_h, "s1", p[1]);
-	usleep(1000);
+	usleep(100000);
 	control_send_comm(usb_h, "s2", p[2]);
-	usleep(1000);
+	usleep(100000);
 	control_send_comm(usb_h, "s3", p[3]);
-	usleep(1000);
-	control_send_comm(usb_h, "r", 0);
+	usleep(100000);
+
+	//	control_send_comm(usb_h, "r", 0);
 
 	control_send_comm(usb_h, "w", delay);
+	usleep(100000);
 	control_send_comm(usb_h, "r", 0);
 
 	if (coinc_flag == 1) {
@@ -132,15 +141,12 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	int out_fd = open(HDrainer_res_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	int out_fd = open(OConsumer_res_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (out_fd == -1) {
 		perror("Error in open file for drainer");
 
 		return -1;
 	}
-
-	//set wait = 0
-	//control_send_comm(usb_h, "w", 0);
 
 	unsigned long int cycles = 0;
 	int counter_events = 0;
@@ -173,15 +179,42 @@ int main(int argc, char **argv)
 
 	int *out_histo_fd = open_files_for_histo(out_foldername);
 	if (out_histo_fd == NULL) {
+		exit_controller(usb_h);
+
 		free_mem_data(&data);
 		free_mem_events(&events);
+		free_mem_histo(&histo_en, &start);
 
+		close(out_fd);
+	
+		fprintf(stderr, "Error in open_files_for_histo()... Exit\n");
+
+		return -1;
+	}
+    
+	int **fds = create_FIFO(FIFO_FOLDERNAME);
+	if (fds == NULL) {
 		exit_controller(usb_h);
+
+		free_mem_data(&data);
+		free_mem_events(&events);
+		free_mem_histo(&histo_en, &start);
+
+		close(out_fd);
+		for (i = 0; i < 16; i++) {
+			close(out_histo_fd[i]);
+		}
+		free(out_histo_fd); out_histo_fd = NULL;
+
+		fprintf(stderr, "Error in create_FIFO()... Exit\n");
+		perror("");
 
 		return -1;
 	}
 
 	signal(SIGALRM, catch_alarm);
+    
+    clock_t start_t, end_t;
 
 	while (read_cycle_flag) {
 		data = read_data_ep(usb_h, data);
@@ -194,22 +227,29 @@ int main(int argc, char **argv)
 		save_data_in_file(out_fd, data);
 		
 		for (i = 0; i < 4; i++) {
-			calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
-			//	printf("area = %.2e, time = %.2e, det = %d\n", event.en, event.t, event.det);
+			calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_line_signal);
 		}
 
 		if (counter_events % CALC_SIZE == 0) {
-			calc_histo(events, en_range, histo_en, start);
+            start_t = clock();
+			
+            calc_histo(events, en_range, histo_en, start);
+			
+            end_t = clock();
+            
 			save_histo_in_file(out_histo_fd, histo_en, start);
+            
+            transfer_data_to_FIFO(fds, histo_en, start);
+
 			counter_events = 0;
-			printf("calc_histo() should be\n");
+
+			printf("calc_histo() should be and it has taken %.6f s\n", (end_t - start_t)/(double)CLOCKS_PER_SEC);
 		}
 
 		cycles++;
 		counter_events += 4;
 
-		//printf("d0 counts = %d, d1 counts = %d\n", data[0][SIZEOF_SIGNAL - 2], data[1][SIZEOF_SIGNAL - 2]);
-		printf("num of cycles = %ld, counter = %d, %d\n", cycles, counter_events, counter_events % CALC_SIZE);
+		//printf("num of cycles = %ld, counter = %d, %d\n", cycles, counter_events, counter_events % CALC_SIZE);
 	}
 
 	printf("d0 counts = %d, d1 counts = %d\n", data[0][SIZEOF_SIGNAL - 2], data[1][SIZEOF_SIGNAL - 2]);
@@ -228,6 +268,8 @@ int main(int argc, char **argv)
 		close(out_histo_fd[i]);
 	}
 	free(out_histo_fd); out_histo_fd = NULL;
+
+	close_fifo(&fds);
 
 	return 0;
 }

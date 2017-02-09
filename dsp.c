@@ -1,5 +1,6 @@
 #include "dsp.h"
 
+
 static const double EPS = 1.0e-06;
 
 static const int IN_EP = 0x86;
@@ -18,12 +19,14 @@ unsigned int K_trap = 4;
 unsigned int L_trap = 16;
 int INTEGRAL_steps_back = 10;
 int INTEGRAL_steps_forw = 20;
-double EN_normal = 4096.0/2000.0;
+double EN_normal = 4096.0/2000000.0;
 double CFT_fraction = 0.5;
 
 static int flag_fifo_wr = 1;
 
 const char *FIFO_fullname = "./fifo/events";
+const char *FIFO_FOLDERNAME = "/home/das/job/dsp/fifos";
+
 
 
 int init_controller(cyusb_handle **usb_h)
@@ -117,10 +120,8 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
         
         ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
         if (ret != 0) {
-            cyusb_error(ret);
             cyusb_close();
-			perror("Error in set range comm");
-            fprintf(stderr, "transferred %d bytes while should be 512\n", transferred);
+            fprintf(stderr, "ERROR WHILE SET RANGE | %s: transferred %d bytes while should be 512\n", libusb_error_name(ret), transferred);
 
 			return -1;
         }
@@ -508,62 +509,157 @@ int calc_en_t(int *data, einfo_t *event, double (*area_f)(int *a), double (*time
 
 
 //FUNCTIONS for TRANSFER DATA EVENT trough FIFO
-
-int create_fifo(const char *fifoname)
+int **create_FIFO(const char *fifo_foldername)
 {
-    int ret = -1;
-	int fd = -1;
+    int i, j;
+	int k, l;
+	int ret = -1;
+	int **fds = (int **)calloc(16, sizeof(int *));
+	if (fds == NULL) {
+		return NULL;
+	}
+	for (i = 0; i < 16; i++) {
+		fds[i] = (int *)calloc(4, sizeof(int));
+		if (fds[i] == NULL) {
+			for (j = 0; j < i; j++) {
+				free(fds[j]); fds[j] = NULL;
+			}
+			free(fds); fds = NULL;
 
-	ret = mkfifo(fifoname, 0666);
-	if (ret == -1) {
-		return -1;
+			return NULL;
+		}
+	}
+	char tempstr[512] = {0};
+
+	for (i = 0; i < 16; i++) {
+		for (j = 0; j < 4; j++) {
+			sprintf(tempstr, "%s/%s_%d_%d", fifo_foldername, "FIFO_TEST", i, j);
+			printf("tempstr = %s\n", tempstr);
+			
+			ret = access(tempstr, F_OK);
+			if (ret == -1) {
+				ret = mkfifo(tempstr, 0666);
+			}
+			//in case of error in mkfifo()/mknod()
+			if ( (ret == -1) ) {
+				for (k = 0; k < i; k++) {
+					for (l = 0; l < 4; l++) {
+						close(fds[k][l]);
+					}
+					free(fds[k]); fds[k] = NULL;
+				}
+				for (l = 0; l < j; l++) {
+					close(fds[i][l]);
+				}
+				free(fds[i]); fds[i] = NULL;
+				free(fds); fds = NULL;
+
+				return NULL;
+			}
+
+			fds[i][j] = open(tempstr, O_WRONLY);
+			strncpy(tempstr, "", 512);
+			//in case of errors in open()
+			if ( (fds[i][j] == -1) ) {
+				printf("ret = %d, fds[%d][%d] = %d\n", ret, i, j, fds[i][j]);
+				for (k = 0; k < i; k++) {
+					for (l = 0; l < 4; l++) {
+						close(fds[k][l]);
+					}
+					free(fds[k]); fds[k] = NULL;
+				}
+				for (l = 0; l < j; l++) {
+					close(fds[i][l]);
+				}
+				free(fds[i]); fds[i] = NULL;
+				free(fds); fds = NULL;
+
+				return NULL;
+			}
+		}
 	}
 
-	fd = open(fifoname, O_WRONLY);
-	if (fd == -1) {
-		return -1;
-	}
-
-    return fd;
+    return fds;
 }
 
 void sigpipe_handler(int sig_num)
 {
+	//!!!at the working version this fprintf should be removed!!!
 	fprintf(stderr, "SIGPIPE was\n");
 }
 
-int transfer_en_t(einfo_t *arr_of_events)
+int transfer_data_to_FIFO(int **fds, unsigned int **histo_en, unsigned int **start)
 {
-	int ret = -1;
-	sighandler_t sigh_ret = NULL;
-    //create_fifo
-    int fd = -1;
-    
-	fd = create_fifo(FIFO_fullname);
-	if (fd == -1) {
-		perror("Error in create_fifo()");
+	int i, j;
 
-		return -1;
-	}
-
-    //handle SIGPIPE
-	sigh_ret = signal(SIGPIPE, sigpipe_handler);
-	if (sigh_ret == SIG_ERR) {
-		perror("Error in SIGPIPE registration");
-		close(fd);
-
-		return -1;
-	}
-
-	//write data to fifo in cycle, 100 events per cycle
-	while (flag_fifo_wr) {
-		ret = write(fd, arr_of_events, 100*sizeof(einfo_t));
-		if (ret < (int) (100*sizeof(einfo_t))) {
-			fprintf(stderr, "write() in %s ret %d instead of %u", __FUNCTION__, ret, 100*sizeof(einfo_t));
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 4; j++) {
+			write(fds[i][j], &(histo_en[i][j*HIST_SIZE/4]), HIST_SIZE/4*sizeof(unsigned int));
 		}
 	}
 
-    close(fd);
+	for (i = 4; i < 16; i++) {
+		for (j = 0; j < 4; j++) {
+			write(fds[i][j], &(start[i - 4][j*HIST_SIZE/4]), HIST_SIZE/4*sizeof(unsigned int));
+		}
+	}
+
+	return 0;
+}
+
+int save_data_in_FIFO(unsigned int **histo_en, unsigned int **start)
+{
+	int i, j;
+	sighandler_t sigh_ret = NULL;
+	int **fds = create_FIFO(FIFO_FOLDERNAME);
+	if (fds == NULL) {
+		return -1;
+	}
+
+	//handle SIGPIPE
+	sigh_ret = signal(SIGPIPE, sigpipe_handler);
+	if (sigh_ret == SIG_ERR) {
+		perror("Error in SIGPIPE registration");
+	    
+		for (i = 0; i < 16; i++) {
+			for (j = 0; j < 4; j++) {
+				close(fds[i][j]);
+			}
+			free(fds[i]); fds[i] = NULL;
+		}
+		free(fds); fds = NULL;
+		
+		return -1;
+	}
+
+	//transfer data to FIFOs
+	while (flag_fifo_wr == 1) {
+		transfer_data_to_FIFO(fds, histo_en, start);
+	}
+	close_fifo(&fds);
+
+	return 0;
+}
+
+int close_fifo(int ***fds)
+{
+	int i, j;
+	int ret = 0;
+	
+	if (fds == NULL) {
+		return -1;
+	}
+
+	for (i = 0; i < 16; i++) {
+		for (j = 0; j < 4; j++) {
+			ret = close((*fds)[i][j]);
+			if (ret != 0) {
+				perror("Error in close_fifo() during closing");
+			}
+		}
+		free((*fds)[i]); (*fds)[i] = NULL;
+	}
+	free(*fds); *fds = NULL;	
 
 	return 0;
 }
@@ -631,16 +727,19 @@ int calc_histo(einfo_t **events, const int en_range[][4], unsigned int **histo_e
 			histo_en[n2-1][s2]++;
 		}
 
+		
 		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) && (s2 >= EN_THRESHOLD) && (s2 < HIST_SIZE) ) {
-			diff_time = T_SCALE[0]*(events[i]->t - events[i+1]->t) + T_SCALE[0]*T_SCALE[1];
+					   	diff_time = T_SCALE[0]*(events[i]->t - events[i+1]->t) + T_SCALE[0]*T_SCALE[1];
 			dtime = 0;
-			for (j = 0; j < HIST_SIZE - 1; j++) {
-				if ( b_definitely_greater_a(j*c, diff_time) && b_definitely_greater_a(diff_time, (j + 1)*c) ) {
+			for (j = 0/*(int)(diff_time/c) - 1*/; j < HIST_SIZE - 1; j++) {
+				if ( (diff_time > j*c) && (diff_time < (j + 1)*c) ) {
+					//!!!CHECK IT!!!
+					//if ( b_definitely_greater_a(j*c, diff_time) && b_definitely_greater_a(diff_time, (j + 1)*c) ) {
 					dtime = j;
 					break;
 				}
 			}
-                    	
+			
 			if ( (n1 == 1) && (n2 == 2) ) {
 				if ( (s1 >= en_range[0][0]) && (s1 <= en_range[0][1]) && (s2 >= en_range[1][2]) && (s2 <= en_range[1][3]) ) {
 					start[0][dtime]++; //T12

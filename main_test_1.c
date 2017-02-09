@@ -31,10 +31,26 @@ void test_area_signal_ForConstSignal_should_RetZero(void)
 		a[i] = 1000;
 	}
 
-	double area = area_signal(a);
+	double area = area_trap_signal(a);
 	free(a); a = NULL;
 
 	TEST_ASSERT_EQUAL_DOUBLE(0.0, area);	   
+}
+
+void test_area_integral_signal_ForReverseTriangle_should_Ret100EN_normal(void)
+{
+	int *a = (int *)calloc(SIZEOF_SIGNAL, sizeof(double));
+	if (a == NULL) {
+		TEST_FAIL_MESSAGE("calloc error");
+
+		return ;
+	}
+
+	a[15] = -100;
+
+	double area = area_integral(a);
+	
+	TEST_ASSERT_EQUAL_DOUBLE(100.0, area);
 }
 
 void test_min_bubble_ForMin_should_RetMinusOne(void)
@@ -69,7 +85,7 @@ void test_time_signal_ForConstSignal_should_RetMinusOne(void)
 	}
 
 	CFT_fraction = 0.5;
-	double x0 = time_signal(a);
+	double x0 = time_line_signal(a);
    
 	free(a);
 
@@ -91,7 +107,7 @@ void test_time_signal_ForStepSignal_should_Ret19point5(void)
 	}
 
 	CFT_fraction = 0.5;
-	double x0 = time_signal(a);
+	double x0 = time_line_signal(a);
    
 	free(a);
 
@@ -107,7 +123,8 @@ int main()
 	RUN_TEST(test_SizeOfSignal_should_Equal256);
 
 	RUN_TEST(test_area_signal_ForConstSignal_should_RetZero);
-	
+	RUN_TEST(test_area_integral_signal_ForReverseTriangle_should_Ret100EN_normal);
+
 	RUN_TEST(test_min_bubble_ForMin_should_RetMinusOne);
 	RUN_TEST(test_min_bubble_ForMinNum_should_RetTen);
 

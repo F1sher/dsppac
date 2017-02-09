@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-g -Wall -O0
 LFLAGS=-L ./lib/ 
-LIBS=-l cyusb -lm
+LIBS=-l cyusb -lusb-1.0 -lm
 DEPS=../dsp.h ../dsp.c
 SRCS=../dsp.c
 
@@ -16,6 +16,9 @@ drainer: $(DEPS) ../drainer.c
 
 hdrainer: $(DEPS) ../hdrainer.c
 	$(CC) -o $@ ../hdrainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
+
+oconsumer: $(DEPS) ../oconsumer.c
+	$(CC) -o $@ ../oconsumer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
 
 clean:
