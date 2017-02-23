@@ -118,10 +118,11 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
         
         printf("command = %s rangeset buf[0] = %u buf[2] = %u buf[3] = %u args = %d\n", command, buf[0], buf[2], buf[3], args);
         
-        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 0);
         if (ret != 0) {
             cyusb_close();
             fprintf(stderr, "ERROR WHILE SET RANGE | %s: transferred %d bytes while should be 512\n", libusb_error_name(ret), transferred);
+            cyusb_error(ret);
 
 			return -1;
         }
@@ -130,7 +131,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
         buf[0] = 7;
         buf[2] = 1;
         
-        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 10);
         if (ret != 0) {
             cyusb_error(ret);
             cyusb_close();
@@ -145,7 +146,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
         buf[2] = args - 256*(args/256);
         buf[3] = args/256;
 			
-        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 10);
         if (ret != 0) {
             cyusb_error(ret);
             cyusb_close();
@@ -160,7 +161,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
         buf[0] = 1;
         buf[2] = 5;
         
-        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 10);
         if (ret != 0) {
             cyusb_error(ret);
             cyusb_close();
@@ -175,7 +176,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
         buf[0] = 5;
         buf[2] = 1;
         
-        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 10);
         if (ret != 0) {
             cyusb_error(ret);
             cyusb_close();
@@ -190,7 +191,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
         buf[0] = 5;
         buf[2] = 2;
 			
-        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 100);
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 10);
         if (ret != 0) {
             cyusb_error(ret);
             cyusb_close();
@@ -276,7 +277,7 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	}
 	#endif
 
-	res = cyusb_bulk_transfer(usb_h, IN_EP, buf, SIZEOF_DATA_EP, &trans, 0);
+	res = cyusb_bulk_transfer(usb_h, IN_EP, buf, SIZEOF_DATA_EP, &trans, 100);
 	if (res != 0) {
 		if (trans != SIZEOF_DATA_EP) {
 			//ERROR in TRANSFER SIZE OF DATA
@@ -729,9 +730,9 @@ int calc_histo(einfo_t **events, const int en_range[][4], unsigned int **histo_e
 
 		
 		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) && (s2 >= EN_THRESHOLD) && (s2 < HIST_SIZE) ) {
-					   	diff_time = T_SCALE[0]*(events[i]->t - events[i+1]->t) + T_SCALE[0]*T_SCALE[1];
+			diff_time = T_SCALE[0]*(events[i]->t - events[i+1]->t) + T_SCALE[0]*T_SCALE[1];
 			dtime = 0;
-			for (j = 0/*(int)(diff_time/c) - 1*/; j < HIST_SIZE - 1; j++) {
+			for (j = (int)(diff_time/c) - 1; j < HIST_SIZE - 1; j++) {
 				if ( (diff_time > j*c) && (diff_time < (j + 1)*c) ) {
 					//!!!CHECK IT!!!
 					//if ( b_definitely_greater_a(j*c, diff_time) && b_definitely_greater_a(diff_time, (j + 1)*c) ) {
