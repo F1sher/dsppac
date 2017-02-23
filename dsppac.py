@@ -107,8 +107,10 @@ class StartWin(Gtk.Window):
             return -1
 
         if self.prog == HDRAINER_EXE:
-            os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
-            ret = 0
+            #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
+            ret_proc = subprocess.Popen( ["{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time)] )
+            ret_proc.wait()
+            ret = ret_proc.returncode
 
             if (ret != 0 or ret is None):
                 print("Error on {} | ret = {}".format(HDRAINER_EXE, ret))
@@ -117,6 +119,7 @@ class StartWin(Gtk.Window):
         elif self.prog == HDRAINER_EXE + "(with signals)":
             ret_proc = subprocess.Popen( ["{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-s"] )
             ret_proc.wait()
+
             if ret_proc.returncode != 0:
                 print("Error on {}".format(HDRAINER_EXE))
             else:

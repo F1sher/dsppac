@@ -1,9 +1,9 @@
 CC=g++
 CFLAGS=-g -Wall -O0
 LFLAGS=-L ./lib/ 
-LIBS=-l cyusb -lusb-1.0 -lm
-DEPS=../dsp.h ../dsp.c
-SRCS=../dsp.c
+LIBS=-lcyusb -lusb-1.0 -lm
+DEPS=../dsp.h ../dsp.c ../parse_args.h ../parse_args.c
+SRCS=../dsp.c ../parse_args.c
 
 #UNITY for unit tests
 UNITY_SRC=../unity/unity.c
@@ -15,11 +15,13 @@ drainer: $(DEPS) ../drainer.c
 	$(CC) -o $@ ../drainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
 hdrainer: $(DEPS) ../hdrainer.c
-	$(CC) -o $@ ../hdrainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
+	$(CC) -o $@ ../hdrainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS) -lzmq -DDEBUG
 
 oconsumer: $(DEPS) ../oconsumer.c
 	$(CC) -o $@ ../oconsumer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
+send_comm: $(DEPS) ../send_comm.c
+	$(CC) -o $@ ../send_comm.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
 clean:
 	rm ./*.o

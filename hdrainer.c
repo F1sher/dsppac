@@ -29,8 +29,6 @@ void catch_sigusr1(int sig_num)
 
 int main(int argc, char **argv)
 {
-	fprintf(stderr, "not here or here? #-2\n");
-
 	int i;
 	int res = 0;
     unsigned int time = 100;
@@ -52,6 +50,10 @@ int main(int argc, char **argv)
 
 		return -1;
 	}
+#ifdef DEBUG
+	fprintf(stdout, "out_foldername = %s\n", out_foldername);
+#endif
+
 
 	int **data = NULL;
 	res = alloc_mem_data(&data);
@@ -72,8 +74,6 @@ int main(int argc, char **argv)
 
 	//set wait = 0
 	//control_send_comm(usb_h, "w", 0);
-
-	fprintf(stderr, "not here or here? #-1\n");
 
 	int counter_events = 0;
 	
@@ -144,10 +144,6 @@ int main(int argc, char **argv)
 	alarm(time);
 	signal(SIGALRM, catch_alarm);
 
-	signal(SIGUSR1, catch_sigusr1);
-
-	fprintf(stderr, "not here or here? #1\n");
-
 #ifdef DEBUG
 	printf("line=%d | time = %u\n", __LINE__, time);
 #endif
@@ -173,21 +169,22 @@ int main(int argc, char **argv)
 		}
 
 #ifdef DEBUG
-		printf("I'm here line = %d and data was read\n", __LINE__);
+		//	printf("I'm here line = %d and data was read | counter_events = %d\n", __LINE__, counter_events);
 #endif
 		save_data_in_file(out_fd, data);
-		
-		for (i = 0; i < 4; i++) {
-			calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
-			//	printf("area = %.2e, time = %.2e, det = %d\n", event.en, event.t, event.det);
-		}
 
 		if (counter_events % CALC_SIZE == 0) {
 			calc_histo(events, en_range, histo_en, start);
 			save_histo_in_file(out_histo_fd, histo_en, start);
 			counter_events = 0;
-			//	printf("calc_histo() should be\n");
 		}
+
+		for (i = 0; i < 4; i++) {
+			calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
+#ifdef DEBUG
+		printf("area = %.2e, time = %.2e, det = %d\n", events[counter_events + i]->en, events[counter_events + i]->t, events[counter_events + i]->det);
+#endif	
+}
 
 		cycles++;
 		counter_events += 4;

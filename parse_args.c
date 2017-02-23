@@ -1,6 +1,6 @@
 #include "parse_args.h"
 
-static const char *out_foldername_default = "../test/histos";
+static const char *out_foldername_default = "/home/das/job/dsp/test/histos";
 static int with_signal_flag = 0;
 
 const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, unsigned int *time)

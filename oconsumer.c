@@ -137,11 +137,8 @@ int main(int argc, char **argv)
 		}
 
 		save_data_in_file(out_fd, data);
-		
-		for (i = 0; i < 4; i++) {
-			calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_line_signal);
-		}
 
+		
 		if (counter_events % CALC_SIZE == 0) {
             start_t = clock();
 			
@@ -156,6 +153,10 @@ int main(int argc, char **argv)
 			counter_events = 0;
 
 			printf("calc_histo() should be and it has taken %.6f s\n", (end_t - start_t)/(double)CLOCKS_PER_SEC);
+		}
+		
+		for (i = 0; i < 4; i++) {
+			calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_line_signal);
 		}
 
 		cycles++;

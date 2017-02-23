@@ -9,7 +9,7 @@ static const int SIZEOF_DATA_EP = 2048;
 const int SIZEOF_SIGNAL = 256;
 static const int CONTROL_REQUEST_TYPE_IN = LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE;
 
-const int CALC_SIZE = 100000;
+const int CALC_SIZE = 10000;
 const int HIST_SIZE = 4096;
 const double T_SCALE[2] = {100.0, 10.0};
 const int EN_THRESHOLD = 10;
@@ -19,7 +19,7 @@ unsigned int K_trap = 4;
 unsigned int L_trap = 16;
 int INTEGRAL_steps_back = 10;
 int INTEGRAL_steps_forw = 20;
-double EN_normal = 4096.0/2000000.0;
+double EN_normal = 4096.0/2000.0;
 double CFT_fraction = 0.5;
 
 static int flag_fifo_wr = 1;
@@ -893,7 +893,7 @@ int save_histo_in_file(const int *out_fd, unsigned int **histo_en, unsigned int 
 		res = write(out_fd[i], histo_en[i], HIST_SIZE*sizeof(unsigned int));
 		if (res != HIST_SIZE*sizeof(unsigned int)) {
 			#ifdef DEBUG
-			perror();
+			perror("");
 			#endif
 
 			return -1;
@@ -905,7 +905,7 @@ int save_histo_in_file(const int *out_fd, unsigned int **histo_en, unsigned int 
 		res = write(out_fd[i], start[i - 4], HIST_SIZE*sizeof(unsigned int));
 		if (res != HIST_SIZE*sizeof(unsigned int)) {
 			#ifdef DEBUG
-			perror();
+			perror("");
 			#endif
 
 			return -1;
