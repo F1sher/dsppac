@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #include <zmq.h>
 
@@ -10,6 +12,38 @@ static unsigned long int cycles = 0;
 const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res";
 const int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
 
+
+const char *socket_communication_path = "./hidden";
+int create_socket(const char *socket_path)
+{
+	struct sockaddr_un addr;
+	int ret = 0;
+	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd == -1) {
+		perror("socket() error");
+
+		return -1;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	if (*socket_path == '\0') {
+		*addr.sun_path = '\0';
+		strncpy(addr.sun_path + 1, socket_path + 1, sizeof(addr.sun_path) - 2);
+	}
+	else {
+		strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path));
+	}
+
+	ret = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
+	if (ret == -1) {
+		perror("connect() error");
+
+		return -1;
+	}
+
+	return fd;
+}
 
 void catch_alarm(int sig_num)
 {
@@ -113,6 +147,24 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
+	char buf[128] = {0};
+	int fd_sock = create_socket(socket_communication_path);
+	if (fd_sock == -1) {
+		exit_controller(usb_h);
+
+		free_mem_data(&data);
+		free_mem_events(&events);
+		free_mem_histo(&histo_en, &start);
+		
+		close(out_fd);
+		for (i = 0; i < 16; i++) {
+			close(out_histo_fd[i]);
+		}
+		free(out_histo_fd); out_histo_fd = NULL;
+
+		return -1;
+	}
+
 	/*
 	void *zmq_context = zmq_ctx_new();
 	void *zmq_sock = zmq_socket(zmq_context, ZMQ_REQ);
@@ -176,10 +228,17 @@ int main(int argc, char **argv)
 		if (counter_events % CALC_SIZE == 0) {
 			calc_histo(events, en_range, histo_en, start);
 			save_histo_in_file(out_histo_fd, histo_en, start);
+			
+			snprintf(buf, 128, "%ld", cycles);
+			res = write(fd_sock, buf, 128*sizeof(char));
+			if (res != 128) {
+				fprintf(stderr, "Error in writting to the sock! ret = %d\n", res);
+			}
+
 			counter_events = 0;
 		}
 
-		for (i = 0; i < 4; i++) {
+		for (i = 0; i < 4; i++) { //add condition to check counter_events + i
 			calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
 #ifdef DEBUG
 		printf("area = %.2e, time = %.2e, det = %d\n", events[counter_events + i]->en, events[counter_events + i]->t, events[counter_events + i]->det);

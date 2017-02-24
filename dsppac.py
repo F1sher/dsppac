@@ -2,10 +2,12 @@
 
 import os
 import subprocess
+import socket
 import time
 import gi
 from gi.repository import Gtk
 from signal import SIGUSR1
+from struct import unpack
 
 PYTHON_EXEC = "python3.4"
 STUFF_FOLDER = "./"
@@ -13,6 +15,8 @@ MAIN_PROG_FOLDER = "/home/das/job/dsp/"
 FPGA_PROG = "send_comm"
 HDRAINER_EXE = "hdrainer"
 ONLINE_EXE = "oconsumer"
+SOCKET_COMMUNICATION_FILE = "./hidden"
+
 
 class StartWin(Gtk.Window):
     
@@ -108,10 +112,36 @@ class StartWin(Gtk.Window):
 
         if self.prog == HDRAINER_EXE:
             #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
+            pid = os.fork()
+            if pid == 0:
+                time.sleep(1)
+                os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
+            else:
+                if os.path.exists(SOCKET_COMMUNICATION_FILE):
+                    os.remove(SOCKET_COMMUNICATION_FILE)
+
+                server_fd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                server_fd.bind(SOCKET_COMMUNICATION_FILE)
+                server_fd.listen(1)
+
+                conn, address = server_fd.accept()
+                while True:
+                    w_pid, ret = os.waitpid(pid, os.WNOHANG)
+                    if w_pid == pid:
+                        break
+                    out_str = conn.recv(128)
+                    num_cycles = unpack("4c", out_str[0:4])
+                    cycles = int.from_bytes(num_cycles[3] , byteorder = "little", signed = False) 
+                    print("out_str = {} | num_cycles[3] = {}, cycles = {}".format(out_str, num_cycles[3], cycles))
+                    time.sleep(2)
+
+                server_fd.close()
+                os.remove(SOCKET_COMMUNICATION_FILE)
+            '''
             ret_proc = subprocess.Popen( ["{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time)] )
             ret_proc.wait()
             ret = ret_proc.returncode
-
+            '''
             if (ret != 0 or ret is None):
                 print("Error on {} | ret = {}".format(HDRAINER_EXE, ret))
             else:
