@@ -15,6 +15,7 @@ MAIN_PROG_FOLDER = "/home/das/job/dsp/"
 FPGA_PROG = "send_comm"
 HDRAINER_EXE = "hdrainer"
 ONLINE_EXE = "oconsumer"
+HISTO_FOLDER = "/home/das/job/dsp/test/histos"
 SOCKET_COMMUNICATION_FILE = "./hidden"
 
 
@@ -45,9 +46,13 @@ class StartWin(Gtk.Window):
         btn_read_data = Gtk.Button(label="Read data")
         btn_read_data.connect("clicked", self.on_btn_read_data_clicked)
         btn_set_porog = []
+        btn_set_porog.append( Gtk.Button(label="Set porog #{:d} - #{:d}".format(1, 4)) )
+        btn_set_porog[0].connect("clicked", self.on_btn_set_porog_clicked)
+        '''
         for i in range(0, 4):
             btn_set_porog.append( Gtk.Button(label="Set porog #{:d}".format(i)) )
             btn_set_porog[i].connect("clicked", self.on_btn_set_porog_clicked)
+        '''
         btn_set_delay = Gtk.Button(label="Set delay")
         btn_set_delay.connect("clicked", self.on_btn_set_delay_clicked)
         btn_coinc_on = Gtk.Button(label="Coinc on")
@@ -68,6 +73,9 @@ class StartWin(Gtk.Window):
         self.entry_delay = Gtk.Entry()
         self.entry_delay.set_text( str(self.delay) )
 
+        self.entry_output_file_histo = Gtk.Entry()
+        self.entry_output_file_histo.set_text(HISTO_FOLDER)
+
         self.statusbar = Gtk.Statusbar()
         self.statusbar.push(self.statusbar.get_context_id("greatings"), "Hello! It's DspPAC. It helps you to start acqusition.")
 
@@ -75,7 +83,8 @@ class StartWin(Gtk.Window):
         grid.attach(combobox_prog, 1, 0, 1, 1)
         for i in range(0, 4):
             grid.attach(self.entry_porog[i], 0, i + 1, 1, 1)
-            grid.attach(btn_set_porog[i], 1, i + 1, 1, 1)
+        #    grid.attach(btn_set_porog[i], 1, i + 1, 1, 1)
+        grid.attach(btn_set_porog[0], 1, 1, 1, 1)
         grid.attach( Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 0, 6, 2, 1 )
         grid.attach(self.entry_delay, 0, 7, 1, 1)
         grid.attach(btn_set_delay, 1, 7, 1, 1)
@@ -86,7 +95,9 @@ class StartWin(Gtk.Window):
         grid.attach( Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 0, 10, 2, 1)
         grid.attach(Gtk.Label("Time [s]:"), 0, 11, 1, 1)
         grid.attach(self.entry_time, 1, 11, 1, 1)
-        grid.attach(self.statusbar, 0, 12, 2, 1)
+        grid.attach(self.entry_output_file_histo, 0, 12, 2, 1)
+        grid.attach(self.statusbar, 0, 13, 2, 1)
+
 
     def __info_dialog(self, primary_text, secondary_text):
         dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, primary_text)
@@ -110,12 +121,18 @@ class StartWin(Gtk.Window):
             self.__info_dialog("Time problem", "Time should be a positive number")
             return -1
 
+        output_histo_file = self.entry_output_file_histo.get_text()
+        if os.path.isdir(output_histo_file) is False:
+            self.__info_dialog("Output histo file problem", "In the entry the existing folder name should be entered")
+            return -1
+
         if self.prog == HDRAINER_EXE:
             #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
             pid = os.fork()
             if pid == 0:
                 time.sleep(1)
                 os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
+                #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-o", output_histo_file)
             else:
                 if os.path.exists(SOCKET_COMMUNICATION_FILE):
                     os.remove(SOCKET_COMMUNICATION_FILE)
@@ -124,16 +141,38 @@ class StartWin(Gtk.Window):
                 server_fd.bind(SOCKET_COMMUNICATION_FILE)
                 server_fd.listen(1)
 
+                cycle_prev, cycle_curr = -1, -1
                 conn, address = server_fd.accept()
                 while True:
                     w_pid, ret = os.waitpid(pid, os.WNOHANG)
                     if w_pid == pid:
                         break
                     out_str = conn.recv(128)
-                    num_cycles = unpack("4c", out_str[0:4])
-                    cycles = int.from_bytes(num_cycles[3] , byteorder = "little", signed = False) 
-                    print("out_str = {} | num_cycles[3] = {}, cycles = {}".format(out_str, num_cycles[3], cycles))
-                    time.sleep(2)
+                    
+                    cycles, _, exe_time = unpack("l3cl", out_str[0:4 + 3 + 4])
+                    cycles, exe_time = int(cycles), int(exe_time)
+                    print("cycles = {}, exe_time = {}".format(cycles, exe_time))
+                    
+                    if cycle_prev == -1:
+                        cycle_prev = cycles
+                    else:
+                        if cycle_curr == -1:
+                            cycle_curr = cyclespi
+
+                        else:
+                            cycle_prev = cycle_curr
+                            cycle_curr = cycles
+                        cycle_per_time = cycle_curr - cycle_prev 
+                    '''
+                    bin_s_num_cycles = unpack("10c", out_str[0:10])
+                    #cycles = int(bin_s_num_cycles[0])*10**3 + int(bin_s_num_cycles[1])*10**2 + int(bin_s_num_cycles[2])*10 + int(bin_s_num_cycles) 
+                    cycles, i = 0, 
+                    for num in bin_s_num_cycles[::-1]:
+                        cycles += num*10**i
+                        i += 1 ## should be check for large numbers! 
+                    print("out_str = {} | num_cycles[3] = {}, cycles = {}".format(out_str, bin_s_num_cycles, cycles))
+                    '''
+                    time.sleep(0.5)
 
                 server_fd.close()
                 os.remove(SOCKET_COMMUNICATION_FILE)

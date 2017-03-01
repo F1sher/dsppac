@@ -165,36 +165,14 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	/*
-	void *zmq_context = zmq_ctx_new();
-	void *zmq_sock = zmq_socket(zmq_context, ZMQ_REQ);
-	zmq_connect(zmq_sock, "tcp://localhost:5555");
-	zmq_msg_t msg;
-	res = zmq_msg_init_size(&msg, 512);
-	if (res != 0) {
-		perror("Error in zmq_msg_init_size()");
-
-		exit_controller(usb_h);
-
-		free_mem_data(&data);
-		free_mem_events(&events);
-		free_mem_histo(&histo_en, &start);
-		
-		close(out_fd);
-		for (i = 0; i < 16; i++) {
-			close(out_histo_fd[i]);
-		}
-		free(out_histo_fd); out_histo_fd = NULL;
-
-		return -1;
-	}
-	*/
-
 	fprintf(stderr, "not here or here? #0\n");
 
 	//set alarm and its handler
 	alarm(time);
 	signal(SIGALRM, catch_alarm);
+
+	//set start time
+	time_t start_time = time(NULL);
 
 #ifdef DEBUG
 	printf("line=%d | time = %u\n", __LINE__, time);
@@ -228,8 +206,9 @@ int main(int argc, char **argv)
 		if (counter_events % CALC_SIZE == 0) {
 			calc_histo(events, en_range, histo_en, start);
 			save_histo_in_file(out_histo_fd, histo_en, start);
-			
-			snprintf(buf, 128, "%ld", cycles);
+
+			//write to socket and check result
+			snprintf(buf, 128, "%ld | %ld", cycles, (long)(time(NULL) - start_time));
 			res = write(fd_sock, buf, 128*sizeof(char));
 			if (res != 128) {
 				fprintf(stderr, "Error in writting to the sock! ret = %d\n", res);
