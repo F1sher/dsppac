@@ -1,13 +1,16 @@
 #!/usr/bin/env python3.4
 
+import json
+import gi
 import os
 import subprocess
 import socket
 import time
-import gi
 from gi.repository import Gtk
 from signal import SIGUSR1
 from struct import unpack
+from struct import error as struct_error_unpack
+
 
 PYTHON_EXEC = "python3.4"
 STUFF_FOLDER = "./"
@@ -17,6 +20,7 @@ HDRAINER_EXE = "hdrainer"
 ONLINE_EXE = "oconsumer"
 HISTO_FOLDER = "/home/das/job/dsp/test/histos"
 SOCKET_COMMUNICATION_FILE = "./hidden"
+CFG_FILE = "cfg.json"
 
 
 class StartWin(Gtk.Window):
@@ -26,7 +30,6 @@ class StartWin(Gtk.Window):
         
         grid = Gtk.Grid()
         grid.set_column_homogeneous(False)
-        #grid.set_row_homogeneous(True)
         self.add(grid)
 
         self.prog = HDRAINER_EXE
@@ -34,7 +37,13 @@ class StartWin(Gtk.Window):
         self.delay = 100
         self.coinc = 1
         self.time = 10
+        self.histo_folder = HISTO_FOLDER
+        self.en_range = []
+        for i in range(0, 4):
+            self.en_range.append([])
         
+        self.parse_cfg(MAIN_PROG_FOLDER + CFG_FILE)
+
         combobox_prog = Gtk.ComboBoxText()
         combobox_prog.set_entry_text_column(0)
         for prog in [HDRAINER_EXE, ONLINE_EXE]:
@@ -48,11 +57,7 @@ class StartWin(Gtk.Window):
         btn_set_porog = []
         btn_set_porog.append( Gtk.Button(label="Set porog #{:d} - #{:d}".format(1, 4)) )
         btn_set_porog[0].connect("clicked", self.on_btn_set_porog_clicked)
-        '''
-        for i in range(0, 4):
-            btn_set_porog.append( Gtk.Button(label="Set porog #{:d}".format(i)) )
-            btn_set_porog[i].connect("clicked", self.on_btn_set_porog_clicked)
-        '''
+        
         btn_set_delay = Gtk.Button(label="Set delay")
         btn_set_delay.connect("clicked", self.on_btn_set_delay_clicked)
         btn_coinc_on = Gtk.Button(label="Coinc on")
@@ -74,7 +79,7 @@ class StartWin(Gtk.Window):
         self.entry_delay.set_text( str(self.delay) )
 
         self.entry_output_file_histo = Gtk.Entry()
-        self.entry_output_file_histo.set_text(HISTO_FOLDER)
+        self.entry_output_file_histo.set_text(self.histo_folder)
 
         self.statusbar = Gtk.Statusbar()
         self.statusbar.push(self.statusbar.get_context_id("greatings"), "Hello! It's DspPAC. It helps you to start acqusition.")
@@ -109,7 +114,6 @@ class StartWin(Gtk.Window):
         self.prog = combobox.get_active_text()
         print("self.prog = {}".format(self.prog))
 
-
     def on_btn_read_data_clicked(self, btn):
         try:
             self.time = int( self.entry_time.get_text() )
@@ -142,6 +146,7 @@ class StartWin(Gtk.Window):
                 server_fd.listen(1)
 
                 cycle_prev, cycle_curr = -1, -1
+                exe_time_prev, exe_time_curr = -1, -1
                 conn, address = server_fd.accept()
                 while True:
                     w_pid, ret = os.waitpid(pid, os.WNOHANG)
@@ -149,20 +154,33 @@ class StartWin(Gtk.Window):
                         break
                     out_str = conn.recv(128)
                     
-                    cycles, _, exe_time = unpack("l3cl", out_str[0:4 + 3 + 4])
-                    cycles, exe_time = int(cycles), int(exe_time)
-                    print("cycles = {}, exe_time = {}".format(cycles, exe_time))
+                    #Count intensity
+                    print( "out_str = {} ".format(out_str) )
+                    try:
+                        cycles, exe_time = unpack("=2l", out_str)
+                    except struct_error_unpack:
+                        #End of *DRAINER should be
+                        None
+                        
+                    print("cycles = {}, exe_time = {} | type = {}".format(cycles, exe_time, type(cycles)))
                     
                     if cycle_prev == -1:
                         cycle_prev = cycles
+                        exe_time_prev = exe_time
                     else:
                         if cycle_curr == -1:
-                            cycle_curr = cyclespi
+                            cycle_curr = cycles
+                            exe_time_curr = exe_time
 
                         else:
-                            cycle_prev = cycle_curr
-                            cycle_curr = cycles
-                        cycle_per_time = cycle_curr - cycle_prev 
+                            cycle_prev, cycle_curr = cycle_curr, cycles
+                            exe_time_prev, exe_time_curr = exe_time_curr, exe_time
+                        if (exe_time_curr - exe_time_prev == 0):
+                            None
+                        else:
+                            cycles_per_time = (cycle_curr - cycle_prev)/(exe_time_curr - exe_time_prev)
+                            print("cycle_per_time = {:f}".format(cycles_per_time))
+                            
                     '''
                     bin_s_num_cycles = unpack("10c", out_str[0:10])
                     #cycles = int(bin_s_num_cycles[0])*10**3 + int(bin_s_num_cycles[1])*10**2 + int(bin_s_num_cycles[2])*10 + int(bin_s_num_cycles) 
@@ -198,21 +216,24 @@ class StartWin(Gtk.Window):
 
 
     def on_btn_set_porog_clicked(self, btn):
+        ''''
         txt_btn = btn.get_label()
         try:
             num_btn = int(txt_btn[-1])
         except ValueError:
             self.__info_dialog("Porog #{} range problem".format(num_btn), "Porog should be a number")
             return -1
+        '''
+        #check for errors for all porogs!!!
+        for num_btn in range(0, 4):
+            self.porog[num_btn] = int( self.entry_porog[num_btn].get_text() )
+            if (self.porog[num_btn] < 0 or self.porog[num_btn] >= 8192):
+                self.__info_dialog("Porog #{} range problem".format(num_btn), "Porog should be in range [0:8K]")
+                return -1
 
-        self.porog[num_btn] = int( self.entry_porog[num_btn].get_text() )
-        if (self.porog[num_btn] < 0 or self.porog[num_btn] >= 8192):
-            self.__info_dialog("Porog #{} range problem".format(num_btn), "Porog should be in range [0:8K]")
-            return -1
-
-        print("txt_btn = {}, self.porog[{}] = {}".format(txt_btn, num_btn, self.porog[num_btn]))
         #execl C prog for set porog #num_btn
-        str_porog = "{:d}".format(self.porog[num_btn])
+        str_porog = "{:d} {:d} {:d} {:d}".format(self.porog[0], self.porog[1], self.porog[2], self.porog[3])
+        print("str_porog = {}".format(str_porog))
         ret = subprocess.call( ["{}build/{}".format(MAIN_PROG_FOLDER, FPGA_PROG), "-p", str_porog] )
         if ret != 0:
             err_msg = "Set porog error! Return code {}.".format(ret)
@@ -264,6 +285,22 @@ class StartWin(Gtk.Window):
             self.statusbar.push(self.statusbar.get_context_id("error in coinc"), err_msg)
         else:
             self.statusbar.push(self.statusbar.get_context_id("ok reser"), "Coinc ON/OFF OK.")
+    
+
+    def parse_cfg(self, path_cfg_file):
+        with open(path_cfg_file, 'r') as cfg_file:
+            #if the size of cfg.json will be larger than 2048 bytes, please change it
+            config = cfg_file.read(2048)
+            config_vals = json.loads(config)
+            print("config_vals = {}".format(config_vals))
+            
+            self.porog = config_vals["porog"]#[90, 90, 90, 90]
+            self.delay = config_vals["delay"]#100
+            self.coinc = 1 if config_vals["coinc?"] is "True" else 0#1
+            self.time = config_vals["time"]#10
+            self.histo_folder = config_vals["histo folder"]
+            for i in range(0, 4):
+                self.en_range[i] = config_vals["en range " + str(i)]
 
 
 if __name__ == "__main__":

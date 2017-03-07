@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 {
 	int i;
 	int res = 0;
-    unsigned int time = 100;
+    unsigned int time_acq = 100;
 	const char *out_foldername = NULL;
 	cyusb_handle *usb_h = NULL;
 	
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	out_foldername = parse_and_give_comm(argc, argv, usb_h, &time);
+	out_foldername = parse_and_give_comm(argc, argv, usb_h, &time_acq);
 	if (out_foldername == NULL) {
 		exit_controller(usb_h);
 
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	char buf[128] = {0};
+	long int buf[2];
 	int fd_sock = create_socket(socket_communication_path);
 	if (fd_sock == -1) {
 		exit_controller(usb_h);
@@ -165,17 +165,15 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	fprintf(stderr, "not here or here? #0\n");
-
 	//set alarm and its handler
-	alarm(time);
+	alarm(time_acq);
 	signal(SIGALRM, catch_alarm);
 
 	//set start time
 	time_t start_time = time(NULL);
 
 #ifdef DEBUG
-	printf("line=%d | time = %u\n", __LINE__, time);
+	printf("line=%d | time = %u\n", __LINE__, time_acq);
 #endif
 
 	while (read_cycle_flag) {
@@ -199,19 +197,23 @@ int main(int argc, char **argv)
 		}
 
 #ifdef DEBUG
-		//	printf("I'm here line = %d and data was read | counter_events = %d\n", __LINE__, counter_events);
+		//printf("I'm here line = %d and data was read | counter_events = %d\n", __LINE__, counter_events);
 #endif
 		save_data_in_file(out_fd, data);
 
-		if (counter_events % CALC_SIZE == 0) {
+		if ((counter_events % CALC_SIZE == 0) && (counter_events != 0)) {
+			#ifdef DEBUG
+			printf("calc&save histo | send info to socket\n");
+			#endif
+
 			calc_histo(events, en_range, histo_en, start);
 			save_histo_in_file(out_histo_fd, histo_en, start);
 
 			//write to socket and check result
-			snprintf(buf, 128, "%ld | %ld", cycles, (long)(time(NULL) - start_time));
-			res = write(fd_sock, buf, 128*sizeof(char));
-			if (res != 128) {
-				fprintf(stderr, "Error in writting to the sock! ret = %d\n", res);
+			buf[0] = cycles; buf[1] = (long)(time(NULL) - start_time);
+			res = write(fd_sock, buf, sizeof(buf));
+			if (res != sizeof(buf)) {
+				fprintf(stderr, "Error in writting to the sock! res = %d\n", res);
 			}
 
 			counter_events = 0;
@@ -220,9 +222,9 @@ int main(int argc, char **argv)
 		for (i = 0; i < 4; i++) { //add condition to check counter_events + i
 			calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
 #ifdef DEBUG
-		printf("area = %.2e, time = %.2e, det = %d\n", events[counter_events + i]->en, events[counter_events + i]->t, events[counter_events + i]->det);
+			//printf("area = %.2e, time = %.2e, det = %d\n", events[counter_events + i]->en, events[counter_events + i]->t, events[counter_events + i]->det);
 #endif	
-}
+		}
 
 		cycles++;
 		counter_events += 4;
