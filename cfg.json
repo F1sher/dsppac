@@ -1,0 +1,11 @@
+{
+	"porog": [50, 50, 50, 50],
+	"delay": 100,
+	"coinc?": "True",
+	"time": 10,
+	"histo folder": "/home/das/job/dsp/test/histos",
+	"en range 0": [100, 200, 300, 400],
+	"en range 1" :[100, 200, 300, 400],
+	"en range 2": [100, 200, 300, 400],
+	"en range 3": [100, 200, 300, 400]
+}
