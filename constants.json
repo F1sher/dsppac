@@ -1,0 +1,10 @@
+{
+	"EN_normal": 20000.0,
+	"K_trap": 2,
+	"L_trap": 12,
+	"Tau_trap": 0.85,
+	"INTEGRAL_steps_back": 10,
+	"INTEGRAL_steps_forw": 20,
+	"CFT_fraction": 0.4,
+	"T_SCALE": [100.0, 10.0]
+}
