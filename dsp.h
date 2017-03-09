@@ -33,11 +33,18 @@ typedef struct {
 extern const int SIZEOF_SIGNAL;
 extern const int HIST_SIZE;
 extern const int CALC_SIZE;
+
+extern double EN_normal;
 extern double Tau_trap;
 extern unsigned int K_trap;
 extern unsigned int L_trap;
-extern double EN_normal;
+extern unsigned int I_MIN_S_SHIFT_trap;
+extern int INTEGRAL_steps_back;
+extern int INTEGRAL_steps_forw;
+
 extern double CFT_fraction;
+extern double T_SCALE[2];
+
 extern const char *FIFO_FOLDERNAME;
 
 //functions for manipulation with USB controller
@@ -219,7 +226,7 @@ int save_data_in_FIFO(unsigned int **histo_en, unsigned int **start);
 int close_fifo(int ***fds);
 
 //function for histo calculation
-int calc_histo(einfo_t **events, const int en_range[][4], unsigned int **histo_en, unsigned int **start);
+int calc_histo(einfo_t **events, int en_range[][4], unsigned int **histo_en, unsigned int **start);
 
 //functions for working with memory
 int alloc_mem_data(int ***data);

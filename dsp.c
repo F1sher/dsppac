@@ -11,20 +11,20 @@ static const int CONTROL_REQUEST_TYPE_IN = LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_T
 
 const int CALC_SIZE = 10000;
 const int HIST_SIZE = 4096;
-const double T_SCALE[2] = {100.0, 10.0};
+double T_SCALE[2] = {100.0, 10.0};
 const int EN_THRESHOLD = 10;
 
 double Tau_trap = 0.95;
-unsigned int K_trap = 4;
-unsigned int L_trap = 16;
+unsigned int K_trap = 2;
+unsigned int L_trap = 12;
+unsigned int I_MIN_S_SHIFT_trap = 5;
 int INTEGRAL_steps_back = 10;
 int INTEGRAL_steps_forw = 20;
 double EN_normal = 4096.0/2000.0;
-double CFT_fraction = 0.5;
+double CFT_fraction = 0.4;
 
 static int flag_fifo_wr = 1;
 
-const char *FIFO_fullname = "./fifo/events";
 const char *FIFO_FOLDERNAME = "/home/das/job/dsp/fifos";
 
 
@@ -378,7 +378,7 @@ double area_trap_signal(int *a)
     
     for (i = 1; i < SIZEOF_SIGNAL/2; i++) {
 	    if (a[i] <= 0.995*a[i-1]) {
-		    i_min_s = i + K_trap + 5; //+3 or +7
+		    i_min_s = i + K_trap + I_MIN_S_SHIFT_trap; //+3 or +7
             
 			break;
         }
@@ -696,7 +696,7 @@ int b_definitely_greater_a(double a, double b)
     return (b - a) > ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a))*EPS );
 }
 
-int calc_histo(einfo_t **events, const int en_range[][4], unsigned int **histo_en, unsigned int **start)
+int calc_histo(einfo_t **events, int en_range[][4], unsigned int **histo_en, unsigned int **start)
 {
 	int i, j;
 	int n1 = 0;

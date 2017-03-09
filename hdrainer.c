@@ -9,8 +9,9 @@
 
 volatile int read_cycle_flag = 1;
 static unsigned long int cycles = 0;
+const char *CONST_file_path = "/home/das/job/dsp/constants.json";
 const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res";
-const int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
+int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
 
 
 const char *socket_communication_path = "./hidden";
@@ -68,6 +69,7 @@ int main(int argc, char **argv)
     unsigned int time_acq = 100;
 	const char *out_foldername = NULL;
 	cyusb_handle *usb_h = NULL;
+	const_t const_params = {0};
 	
 	res = init_controller(&usb_h);
 	if (res != 0) {
@@ -76,7 +78,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	out_foldername = parse_and_give_comm(argc, argv, usb_h, &time_acq);
+	out_foldername = parse_and_give_comm(argc, argv, usb_h, &time_acq, en_range);
 	if (out_foldername == NULL) {
 		exit_controller(usb_h);
 
@@ -84,10 +86,33 @@ int main(int argc, char **argv)
 
 		return -1;
 	}
+
 #ifdef DEBUG
+	int j;
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 4; j++) 
+			printf("en_range[%d][%d] = %d\t", i, j, en_range[i][j]);
+		printf("\n");
+	}
+
 	fprintf(stdout, "out_foldername = %s\n", out_foldername);
 #endif
 
+	res = const_parser(CONST_file_path, &const_params);
+	if (res != 0) {
+	    exit_controller(usb_h);
+
+	    fprintf(stderr, "Error in const_parser(). res = %d\n", res);
+		
+		return -1;
+    }
+	
+	set_const_params(const_params);
+	
+	printf("EN_normal = %.2f | K_trap = %d | L_trap = %d | Tau_trap = %.2f\n", \
+		EN_normal, K_trap, L_trap, Tau_trap);
+    printf("INT_steps_back = %d | INT_steps_forw = %d\n", INTEGRAL_steps_back, INTEGRAL_steps_forw);
+    printf("CFT_fraction = %.2f | T_SCALE = [%.2f, %.2f]\n", CFT_fraction, T_SCALE[0], T_SCALE[1]);
 
 	int **data = NULL;
 	res = alloc_mem_data(&data);

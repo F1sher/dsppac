@@ -40,8 +40,9 @@ class StartWin(Gtk.Window):
         self.histo_folder = HISTO_FOLDER
         self.en_range = []
         for i in range(0, 4):
-            self.en_range.append([])
+            self.en_range.append([0, 0, 0, 0])
         
+        #comment For test purposes only
         self.parse_cfg(MAIN_PROG_FOLDER + CFG_FILE)
 
         combobox_prog = Gtk.ComboBoxText()
@@ -126,16 +127,19 @@ class StartWin(Gtk.Window):
             return -1
 
         output_histo_file = self.entry_output_file_histo.get_text()
-        if os.path.isdir(output_histo_file) is False:
-            self.__info_dialog("Output histo file problem", "In the entry the existing folder name should be entered")
-            return -1
+        if os.path.exists(output_histo_file) is False:
+            os.makedirs(output_histo_file)
+        else:
+            if os.path.isdir(output_histo_file) is False:
+                self.__info_dialog("Output histo file problem", "In the entry the existing folder name or new name for new folder should be entered")
+                return -1
 
         if self.prog == HDRAINER_EXE:
             #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
             pid = os.fork()
             if pid == 0:
                 time.sleep(1)
-                os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
+                os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-e", str(self.en_range)[1:-1])
                 #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-o", output_histo_file)
             else:
                 if os.path.exists(SOCKET_COMMUNICATION_FILE):
@@ -179,30 +183,24 @@ class StartWin(Gtk.Window):
                             None
                         else:
                             cycles_per_time = (cycle_curr - cycle_prev)/(exe_time_curr - exe_time_prev)
+                            self.lbl_intens.set_text("{:d} cnts/s | {:d} s".format(int(cycles_per_time), exe_time_curr))
+                            time.sleep(1)
+                            while Gtk.events_pending():
+                                Gtk.main_iteration_do(False)
                             print("cycle_per_time = {:f}".format(cycles_per_time))
-                            
-                    '''
-                    bin_s_num_cycles = unpack("10c", out_str[0:10])
-                    #cycles = int(bin_s_num_cycles[0])*10**3 + int(bin_s_num_cycles[1])*10**2 + int(bin_s_num_cycles[2])*10 + int(bin_s_num_cycles) 
-                    cycles, i = 0, 
-                    for num in bin_s_num_cycles[::-1]:
-                        cycles += num*10**i
-                        i += 1 ## should be check for large numbers! 
-                    print("out_str = {} | num_cycles[3] = {}, cycles = {}".format(out_str, bin_s_num_cycles, cycles))
-                    '''
-                    time.sleep(0.5)
 
                 server_fd.close()
                 os.remove(SOCKET_COMMUNICATION_FILE)
-            '''
-            ret_proc = subprocess.Popen( ["{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time)] )
-            ret_proc.wait()
-            ret = ret_proc.returncode
-            '''
+
             if (ret != 0 or ret is None):
+                err_msg = "HDRAINER error! Return code {}.".format(ret)
+                self.statusbar.push(self.statusbar.get_context_id("error in HDRAINER"), err_msg)
                 print("Error on {} | ret = {}".format(HDRAINER_EXE, ret))
             else:
+                self.lbl_intens.set_text( "{:d} cnts/s | {:d} s".format(0, self.time))
+                self.statusbar.push(self.statusbar.get_context_id("HDRAINER Ok end"), "HDRAINER exits normally")
                 print("Success execution of {}".format(HDRAINER_EXE))
+
         elif self.prog == HDRAINER_EXE + "(with signals)":
             ret_proc = subprocess.Popen( ["{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-s"] )
             ret_proc.wait()
@@ -269,6 +267,8 @@ class StartWin(Gtk.Window):
             self.statusbar.push(self.statusbar.get_context_id("error in reset"), err_msg)
         else:
             self.statusbar.push(self.statusbar.get_context_id("ok reser"), "Reset OK.")
+        #Next line for test only!!!
+        #self.save_cfg(CFG_FILE)
 
 
     def on_btn_coinc_clicked(self, btn):
@@ -285,8 +285,8 @@ class StartWin(Gtk.Window):
             self.statusbar.push(self.statusbar.get_context_id("error in coinc"), err_msg)
         else:
             self.statusbar.push(self.statusbar.get_context_id("ok reser"), "Coinc ON/OFF OK.")
-    
 
+    
     def parse_cfg(self, path_cfg_file):
         with open(path_cfg_file, 'r') as cfg_file:
             #if the size of cfg.json will be larger than 2048 bytes, please change it
@@ -300,7 +300,36 @@ class StartWin(Gtk.Window):
             self.time = config_vals["time"]#10
             self.histo_folder = config_vals["histo folder"]
             for i in range(0, 4):
-                self.en_range[i] = config_vals["en range " + str(i)]
+                self.en_range[i] = config_vals["en_range " + str(i)]
+
+
+    def save_cfg(self, path_cfg_file):
+        with open(path_cfg_file, 'w') as cfg_file:
+            config = {}
+            config["porog"] = self.porog
+            config["delay"] = self.delay
+            config["coinc?"] = "True" if self.coinc == 1 else "False"
+            config["time"] = self.time
+            config["histo folder"] = self.histo_folder
+            for i in range(0, 4):
+                config["en range " + str(i)] = self.en_range[i]
+            
+            def dict_to_true_cfg_str(d):
+                res = "{\n"
+                res += "\t\"porog\": " + str(d["porog"]) + ",\n"
+                res += "\t\"delay\": " + str(d["delay"]) + ",\n"
+                res += "\t\"coinc?\": " + "\"" + str(d["coinc?"]) + "\"" + ",\n"
+                res += "\t\"time\": " + str(d["time"]) + ",\n"
+                res += "\t\"histo folder\": " + "\"" + str(d["histo folder"]) + "\"" + ",\n"
+                for i in range(0, 3):
+                    res += "\t\"en_range " + str(i) + "\": " + str(d["en range " + str(i)])  + ",\n"
+                i = 3
+                res += "\t\"en_range " + str(i) + "\": " + str(d["en range " + str(i)])  + "\n"
+                res +="}"
+                return res
+
+            cfg_file.write(dict_to_true_cfg_str(config))
+
 
 
 if __name__ == "__main__":
