@@ -42,7 +42,7 @@ class StartWin(Gtk.Window):
         for i in range(0, 4):
             self.en_range.append([0, 0, 0, 0])
         
-        #comment For test purposes only
+        #comment it. For test purposes only
         self.parse_cfg(MAIN_PROG_FOLDER + CFG_FILE)
 
         combobox_prog = Gtk.ComboBoxText()
@@ -82,6 +82,11 @@ class StartWin(Gtk.Window):
         self.entry_output_file_histo = Gtk.Entry()
         self.entry_output_file_histo.set_text(self.histo_folder)
 
+        self.entry_en_range = []
+        for i in range(0, 4):
+            self.entry_en_range.append( Gtk.Entry() )
+            self.entry_en_range[i].set_text( str(self.en_range[i])[1:-1] )
+
         self.statusbar = Gtk.Statusbar()
         self.statusbar.push(self.statusbar.get_context_id("greatings"), "Hello! It's DspPAC. It helps you to start acqusition.")
 
@@ -98,11 +103,18 @@ class StartWin(Gtk.Window):
         grid.attach(btn_coinc_on, 1, 8, 1, 1)
         grid.attach(self.lbl_intens, 0, 9, 1, 1)
         grid.attach(btn_coinc_off, 1, 9, 1, 1)
+        
         grid.attach( Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 0, 10, 2, 1)
         grid.attach(Gtk.Label("Time [s]:"), 0, 11, 1, 1)
         grid.attach(self.entry_time, 1, 11, 1, 1)
+        
         grid.attach(self.entry_output_file_histo, 0, 12, 2, 1)
-        grid.attach(self.statusbar, 0, 13, 2, 1)
+
+        for i in range(0, 4):
+            grid.attach(Gtk.Label("En range #" + str(i + 1) + ":"), 0, 13 + i, 1, 1)
+            grid.attach(self.entry_en_range[i], 1, 13 + i, 1, 1)
+
+        grid.attach(self.statusbar, 0, 17, 2, 1)
 
 
     def __info_dialog(self, primary_text, secondary_text):
@@ -134,13 +146,18 @@ class StartWin(Gtk.Window):
                 self.__info_dialog("Output histo file problem", "In the entry the existing folder name or new name for new folder should be entered")
                 return -1
 
+        self.save_cfg(MAIN_PROG_FOLDER + CFG_FILE)
+
         if self.prog == HDRAINER_EXE:
             #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
             pid = os.fork()
             if pid == 0:
                 time.sleep(1)
-                os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-e", str(self.en_range)[1:-1])
-                #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-o", output_histo_file)
+                try:
+                    os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-e", str(self.en_range)[1:-1])
+                except OSError:
+                    print("OSerror exception")
+                    #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-o", output_histo_file)
             else:
                 if os.path.exists(SOCKET_COMMUNICATION_FILE):
                     os.remove(SOCKET_COMMUNICATION_FILE)
@@ -296,7 +313,7 @@ class StartWin(Gtk.Window):
             
             self.porog = config_vals["porog"]#[90, 90, 90, 90]
             self.delay = config_vals["delay"]#100
-            self.coinc = 1 if config_vals["coinc?"] is "True" else 0#1
+            self.coinc = 1 if config_vals["coinc?"] == "True" else 0#1
             self.time = config_vals["time"]#10
             self.histo_folder = config_vals["histo folder"]
             for i in range(0, 4):
@@ -311,8 +328,13 @@ class StartWin(Gtk.Window):
             config["coinc?"] = "True" if self.coinc == 1 else "False"
             config["time"] = self.time
             config["histo folder"] = self.histo_folder
+            
             for i in range(0, 4):
-                config["en range " + str(i)] = self.en_range[i]
+                energies = map(int, self.entry_en_range[i].get_text().split(', '))
+                for j in range(0, 4):
+                    self.en_range[i][j] = next(energies)
+            for i in range(0, 4):
+                config["en_range " + str(i)] = self.en_range[i]
             
             def dict_to_true_cfg_str(d):
                 res = "{\n"
@@ -322,9 +344,9 @@ class StartWin(Gtk.Window):
                 res += "\t\"time\": " + str(d["time"]) + ",\n"
                 res += "\t\"histo folder\": " + "\"" + str(d["histo folder"]) + "\"" + ",\n"
                 for i in range(0, 3):
-                    res += "\t\"en_range " + str(i) + "\": " + str(d["en range " + str(i)])  + ",\n"
+                    res += "\t\"en_range " + str(i) + "\": " + str(d["en_range " + str(i)])  + ",\n"
                 i = 3
-                res += "\t\"en_range " + str(i) + "\": " + str(d["en range " + str(i)])  + "\n"
+                res += "\t\"en_range " + str(i) + "\": " + str(d["en_range " + str(i)])  + "\n"
                 res +="}"
                 return res
 
