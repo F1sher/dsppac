@@ -50,7 +50,7 @@ class StartWin(Gtk.Window):
         for prog in [HDRAINER_EXE, ONLINE_EXE]:
                 combobox_prog.append_text(prog)
                 combobox_prog.append_text(prog + "(with signals)")
-        combobox_prog.set_active(0)
+        combobox_prog.set_active(1)
         combobox_prog.connect("changed", self.on_combobox_prog_changed)
 
         btn_read_data = Gtk.Button(label="Read data")
@@ -82,6 +82,9 @@ class StartWin(Gtk.Window):
         self.entry_output_file_histo = Gtk.Entry()
         self.entry_output_file_histo.set_text(self.histo_folder)
 
+        self.filechooser_histo = Gtk.FileChooserButton(title="Select a histo folder", action=Gtk.FileChooserAction.SELECT_FOLDER)
+        self.filechooser_histo.set_filename(self.histo_folder)
+
         self.entry_en_range = []
         for i in range(0, 4):
             self.entry_en_range.append( Gtk.Entry() )
@@ -105,13 +108,14 @@ class StartWin(Gtk.Window):
         grid.attach(btn_coinc_off, 1, 9, 1, 1)
         
         grid.attach( Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 0, 10, 2, 1)
-        grid.attach(Gtk.Label("Time [s]:"), 0, 11, 1, 1)
+        grid.attach(Gtk.Label("ACQ Time [s]:"), 0, 11, 1, 1)
         grid.attach(self.entry_time, 1, 11, 1, 1)
         
-        grid.attach(self.entry_output_file_histo, 0, 12, 2, 1)
+        #grid.attach(self.entry_output_file_histo, 0, 12, 2, 1)
+        grid.attach(self.filechooser_histo, 0, 12, 2, 1)
 
         for i in range(0, 4):
-            grid.attach(Gtk.Label("En range #" + str(i + 1) + ":"), 0, 13 + i, 1, 1)
+            grid.attach(Gtk.Label("EN range #" + str(i + 1) + ":"), 0, 13 + i, 1, 1)
             grid.attach(self.entry_en_range[i], 1, 13 + i, 1, 1)
 
         grid.attach(self.statusbar, 0, 17, 2, 1)
@@ -123,9 +127,11 @@ class StartWin(Gtk.Window):
         dialog.run()
         dialog.destroy()
 
+
     def on_combobox_prog_changed(self, combobox):
         self.prog = combobox.get_active_text()
         print("self.prog = {}".format(self.prog))
+
 
     def on_btn_read_data_clicked(self, btn):
         try:
@@ -138,7 +144,8 @@ class StartWin(Gtk.Window):
             self.__info_dialog("Time problem", "Time should be a positive number")
             return -1
 
-        output_histo_file = self.entry_output_file_histo.get_text()
+        #output_histo_file = self.entry_output_file_histo.get_text()
+        output_histo_file = self.filechooser_histo.get_filename()
         if os.path.exists(output_histo_file) is False:
             os.makedirs(output_histo_file)
         else:
@@ -149,85 +156,92 @@ class StartWin(Gtk.Window):
         self.save_cfg(MAIN_PROG_FOLDER + CFG_FILE)
 
         if self.prog == HDRAINER_EXE:
-            #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
-            pid = os.fork()
-            if pid == 0:
-                time.sleep(1)
-                try:
-                    os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-e", str(self.en_range)[1:-1])
-                except OSError:
-                    print("OSerror exception")
-                    #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-o", output_histo_file)
-            else:
-                if os.path.exists(SOCKET_COMMUNICATION_FILE):
-                    os.remove(SOCKET_COMMUNICATION_FILE)
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), [ "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
+        elif self.prog == HDRAINER_EXE + "(with signals)":
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
+        elif self.prog == ONLINE_EXE:
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), [ "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
+        elif self.prog == ONLINE_EXE + "(with signals)":
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
 
-                server_fd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                server_fd.bind(SOCKET_COMMUNICATION_FILE)
-                server_fd.listen(1)
 
-                cycle_prev, cycle_curr = -1, -1
-                exe_time_prev, exe_time_curr = -1, -1
-                conn, address = server_fd.accept()
-                while True:
-                    w_pid, ret = os.waitpid(pid, os.WNOHANG)
-                    if w_pid == pid:
-                        break
-                    out_str = conn.recv(128)
-                    
-                    #Count intensity
-                    print( "out_str = {} ".format(out_str) )
-                    try:
-                        cycles, exe_time = unpack("=2l", out_str)
-                    except struct_error_unpack:
-                        #End of *DRAINER should be
-                        None
-                        
-                    print("cycles = {}, exe_time = {} | type = {}".format(cycles, exe_time, type(cycles)))
-                    
-                    if cycle_prev == -1:
-                        cycle_prev = cycles
-                        exe_time_prev = exe_time
-                    else:
-                        if cycle_curr == -1:
-                            cycle_curr = cycles
-                            exe_time_curr = exe_time
-
-                        else:
-                            cycle_prev, cycle_curr = cycle_curr, cycles
-                            exe_time_prev, exe_time_curr = exe_time_curr, exe_time
-                        if (exe_time_curr - exe_time_prev == 0):
-                            None
-                        else:
-                            cycles_per_time = (cycle_curr - cycle_prev)/(exe_time_curr - exe_time_prev)
-                            self.lbl_intens.set_text("{:d} cnts/s | {:d} s".format(int(cycles_per_time), exe_time_curr))
-                            time.sleep(1)
-                            while Gtk.events_pending():
-                                Gtk.main_iteration_do(False)
-                            print("cycle_per_time = {:f}".format(cycles_per_time))
-
-                server_fd.close()
+    def start_C_prog(self, prog_name, prog_path, prog_params):
+        pid = os.fork()
+        if pid == 0:
+            #Child
+            time.sleep(1)
+            try:
+                os.execl(prog_path, prog_path, *prog_params)
+                '''
+                os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), \
+                         "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), \
+                         "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1])
+                '''
+            except OSError:
+                print("OSerror exception")
+                raise
+                #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-o", output_histo_file)
+        else:
+            #Parent
+            if os.path.exists(SOCKET_COMMUNICATION_FILE):
                 os.remove(SOCKET_COMMUNICATION_FILE)
+                
+            server_fd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            server_fd.bind(SOCKET_COMMUNICATION_FILE)
+            server_fd.listen(1)
+
+            cycle_prev, cycle_curr = -1, -1
+            exe_time_prev, exe_time_curr = -1, -1
+            conn, address = server_fd.accept()
+            while True:
+                w_pid, ret = os.waitpid(pid, os.WNOHANG)
+                if w_pid == pid:
+                    break
+                out_str = conn.recv(128)
+                
+                #Count intensity
+                print( "out_str = {} ".format(out_str) )
+                try:
+                    cycles, exe_time = unpack("=2l", out_str)
+                except struct_error_unpack:
+                    #End of *DRAINER should be
+                    None
+                        
+                print("cycles = {}, exe_time = {} | type = {}".format(cycles, exe_time, type(cycles)))
+                    
+                if cycle_prev == -1:
+                    cycle_prev = cycles
+                    exe_time_prev = exe_time
+                else:
+                    if cycle_curr == -1:
+                        cycle_curr = cycles
+                        exe_time_curr = exe_time
+                        
+                    else:
+                        cycle_prev, cycle_curr = cycle_curr, cycles
+                        exe_time_prev, exe_time_curr = exe_time_curr, exe_time
+                    if (exe_time_curr - exe_time_prev == 0):
+                        None
+                    else:
+                        cycles_per_time = (cycle_curr - cycle_prev)/(exe_time_curr - exe_time_prev)
+                        self.lbl_intens.set_text("{:d} cnts/s | {:d} s".format(int(cycles_per_time), exe_time_curr))
+                        time.sleep(1)
+                        while Gtk.events_pending():
+                            Gtk.main_iteration_do(False)
+                        print("cycle_per_time = {:f}".format(cycles_per_time))
+
+            server_fd.close()
+            os.remove(SOCKET_COMMUNICATION_FILE)
 
             if (ret != 0 or ret is None):
-                err_msg = "HDRAINER error! Return code {}.".format(ret)
-                self.statusbar.push(self.statusbar.get_context_id("error in HDRAINER"), err_msg)
-                print("Error on {} | ret = {}".format(HDRAINER_EXE, ret))
+                err_msg = prog_name + " error! Return code {}.".format(ret)
+                self.statusbar.push(self.statusbar.get_context_id("error in " + prog_name), err_msg)
+                print("Error on {} | ret = {}".format(prog_name, ret))
             else:
                 self.lbl_intens.set_text( "{:d} cnts/s | {:d} s".format(0, self.time))
-                self.statusbar.push(self.statusbar.get_context_id("HDRAINER Ok end"), "HDRAINER exits normally")
-                print("Success execution of {}".format(HDRAINER_EXE))
+                self.statusbar.push(self.statusbar.get_context_id(prog_name + " Ok end"), prog_name + " exits normally")
+                print("Success execution of {}".format(prog_name))
 
-        elif self.prog == HDRAINER_EXE + "(with signals)":
-            ret_proc = subprocess.Popen( ["{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-s"] )
-            ret_proc.wait()
-
-            if ret_proc.returncode != 0:
-                print("Error on {}".format(HDRAINER_EXE))
-            else:
-                print("Success execution of {}".format(HDRAINER_EXE))
-        elif self.prog == ONLINE_EXE:
-            os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time))
 
 
     def on_btn_set_porog_clicked(self, btn):
