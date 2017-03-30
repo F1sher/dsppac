@@ -52,6 +52,7 @@ class StartWin(Gtk.Window):
                 combobox_prog.append_text(prog + "(with signals)")
         combobox_prog.set_active(1)
         combobox_prog.connect("changed", self.on_combobox_prog_changed)
+        self.prog = HDRAINER_EXE + "(with signals)" #should be combobox_prog.do_changed()
 
         btn_read_data = Gtk.Button(label="Read data")
         btn_read_data.connect("clicked", self.on_btn_read_data_clicked)
@@ -155,14 +156,15 @@ class StartWin(Gtk.Window):
 
         self.save_cfg(MAIN_PROG_FOLDER + CFG_FILE)
 
+        print("self.prog = {}".format(self.prog))
         if self.prog == HDRAINER_EXE:
-            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), [ "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, HDRAINER_EXE), [ "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
         elif self.prog == HDRAINER_EXE + "(with signals)":
-            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, HDRAINER_EXE), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
         elif self.prog == ONLINE_EXE:
-            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), [ "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, ONLINE_EXE), [ "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
         elif self.prog == ONLINE_EXE + "(with signals)":
-            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, ONLINE_EXE), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
 
 
     def start_C_prog(self, prog_name, prog_path, prog_params):
@@ -297,7 +299,7 @@ class StartWin(Gtk.Window):
             err_msg = "Reset error! Return code {}.".format(ret)
             self.statusbar.push(self.statusbar.get_context_id("error in reset"), err_msg)
         else:
-            self.statusbar.push(self.statusbar.get_context_id("ok reser"), "Reset OK.")
+            self.statusbar.push(self.statusbar.get_context_id("ok reset"), "Reset OK.")
         #Next line for test only!!!
         #self.save_cfg(CFG_FILE)
 
@@ -315,7 +317,7 @@ class StartWin(Gtk.Window):
             err_msg = "Coinc ON/OFF error! Return code {}.".format(ret)
             self.statusbar.push(self.statusbar.get_context_id("error in coinc"), err_msg)
         else:
-            self.statusbar.push(self.statusbar.get_context_id("ok reser"), "Coinc ON/OFF OK.")
+            self.statusbar.push(self.statusbar.get_context_id("ok coinc on/off"), "Coinc ON/OFF OK.")
 
     
     def parse_cfg(self, path_cfg_file):
