@@ -12,7 +12,7 @@ static unsigned long int cycles = 0;
 const char *CONST_file_path = "/home/das/job/dsp/constants.json";
 const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res";
 int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
-
+double t_scale[2] = {100.0, 10.0};
 
 const char *socket_communication_path = "./hidden";
 int create_socket(const char *socket_path)
@@ -55,10 +55,9 @@ void catch_alarm(int sig_num)
 
 void catch_sigusr1(int sig_num)
 {
-	fprintf(stderr, "sig num = %d\n", sig_num);
-	printf("%ld\n", cycles); 
-
-	signal(sig_num, catch_sigusr1);
+	fprintf(stdout, "Catch sigusr1 signal");
+	
+	read_cycle_flag = 0;
 }
 
 
@@ -66,6 +65,7 @@ int main(int argc, char **argv)
 {
 	int i;
 	int res = 0;
+	int with_signal_flag = 0;
     unsigned int time_acq = 100;
 	const char *out_foldername = NULL;
 	cyusb_handle *usb_h = NULL;
@@ -78,7 +78,8 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	out_foldername = parse_and_give_comm(argc, argv, usb_h, &time_acq, en_range);
+	out_foldername = parse_and_give_comm(argc, argv, usb_h, \
+										 &with_signal_flag, &time_acq, en_range);
 	if (out_foldername == NULL) {
 		exit_controller(usb_h);
 
@@ -86,17 +87,6 @@ int main(int argc, char **argv)
 
 		return -1;
 	}
-
-#ifdef DEBUG
-	int j;
-	for (i = 0; i < 4; i++) {
-		for (j = 0; j < 4; j++) 
-			printf("en_range[%d][%d] = %d\t", i, j, en_range[i][j]);
-		printf("\n");
-	}
-
-	fprintf(stdout, "out_foldername = %s\n", out_foldername);
-#endif
 
 	res = const_parser(CONST_file_path, &const_params);
 	if (res != 0) {
@@ -109,10 +99,23 @@ int main(int argc, char **argv)
 	
 	set_const_params(const_params);
 	
+#ifdef DEBUG
+	printf("\n");
+	int j;
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 4; j++) 
+			printf("en_range[%d][%d] = %d\t", i, j, en_range[i][j]);
+		printf("\n");
+	}
+
+	fprintf(stdout, "out_foldername = %s\n", out_foldername);
+
 	printf("EN_normal = %.2f | K_trap = %d | L_trap = %d | Tau_trap = %.2f\n", \
 		EN_normal, K_trap, L_trap, Tau_trap);
     printf("INT_steps_back = %d | INT_steps_forw = %d\n", INTEGRAL_steps_back, INTEGRAL_steps_forw);
     printf("CFT_fraction = %.2f | T_SCALE = [%.2f, %.2f]\n", CFT_fraction, T_SCALE[0], T_SCALE[1]);
+	printf("\n");
+#endif
 
 	int **data = NULL;
 	res = alloc_mem_data(&data);
@@ -122,6 +125,11 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Error in alloc_mem_data()\n");
 		
 		return -1;
+	}
+
+	intens_t intens[4];
+	for (i = 0; i < 4; i++) {
+		intens[i] = (intens_t) {.get_flag=-1, .counts=-1, .d_counts=0};
 	}
 
 	int out_fd = open(HDrainer_res_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -172,7 +180,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	long int buf[2];
+	long int buf[7];
 	int fd_sock = create_socket(socket_communication_path);
 	if (fd_sock == -1) {
 		exit_controller(usb_h);
@@ -194,13 +202,24 @@ int main(int argc, char **argv)
 	alarm(time_acq);
 	signal(SIGALRM, catch_alarm);
 
+	//set STOP signal handler
+	signal(SIGUSR1, catch_sigusr1);
+
 	//set start time
 	time_t start_time = time(NULL);
+	struct timeval timeval_start_time, timeval_curr_time;
+	
+	gettimeofday(&timeval_start_time, NULL);
+	long int seconds = timeval_start_time.tv_sec;
+	long int u_seconds = timeval_start_time.tv_usec;
+	
 
 #ifdef DEBUG
 	printf("line=%d | time = %u\n", __LINE__, time_acq);
+	printf("with_signal_flag = %d\n", with_signal_flag);
 #endif
 
+	//Read cycle
 	while (read_cycle_flag) {
 		data = read_data_ep(usb_h, data);
 		if (data == NULL) {
@@ -221,10 +240,16 @@ int main(int argc, char **argv)
 			return -1;
 		}
 
+		get_det_counts(data, intens, 0);
+
 #ifdef DEBUG
 		//printf("I'm here line = %d and data was read | counter_events = %d\n", __LINE__, counter_events);
+		//printf("FOR #3 signal: detN = %d | cnts = %d\n", data[3][255], data[3][254]);
 #endif
-		save_data_in_file(out_fd, data);
+		//if signal mode is ON or OFF?
+		if (with_signal_flag == 1) {
+			save_data_in_file(out_fd, data);
+		}
 
 		if ((counter_events % CALC_SIZE == 0) && (counter_events != 0)) {
 			#ifdef DEBUG
@@ -232,10 +257,28 @@ int main(int argc, char **argv)
 			#endif
 
 			calc_histo(events, en_range, histo_en, start);
+			
 			save_histo_in_file(out_histo_fd, histo_en, start);
 
+			get_det_counts(data, intens, 1);
 			//write to socket and check result
+			//need to create func prepare_buf_to_sock(long int buf[], start_time, inens_t intens, long int *seconds, long int *u_seconds)
 			buf[0] = cycles; buf[1] = (long)(time(NULL) - start_time);
+			buf[2] = buf[3] = buf[4] = 0;
+			buf[5] = (long)(intens[3].d_counts);
+
+			gettimeofday(&timeval_curr_time, NULL);
+#ifdef DEBUG
+			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
+			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
+#endif		
+			int diff_sec = seconds - timeval_curr_time.tv_sec;
+			int diff_usec = u_seconds - timeval_curr_time.tv_usec;
+			buf[6] = (long)(-1.0*(1000*diff_sec + diff_usec/1000.0));
+			
+			seconds = timeval_curr_time.tv_sec;
+			u_seconds = timeval_curr_time.tv_usec;
+
 			res = write(fd_sock, buf, sizeof(buf));
 			if (res != sizeof(buf)) {
 				fprintf(stderr, "Error in writting to the sock! res = %d\n", res);
@@ -244,8 +287,9 @@ int main(int argc, char **argv)
 			counter_events = 0;
 		}
 
-		for (i = 0; i < 4; i++) { //add condition to check counter_events + i
+		for (i = 0; i < 4; i++) { //add condition to check if ((counter_events + i) < CALC_SIZE)
 			calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
+
 #ifdef DEBUG
 			//printf("area = %.2e, time = %.2e, det = %d\n", events[counter_events + i]->en, events[counter_events + i]->t, events[counter_events + i]->det);
 #endif	
@@ -257,14 +301,19 @@ int main(int argc, char **argv)
 		//printf("d0 counts = %d, d1 counts = %d\n", data[0][SIZEOF_SIGNAL - 2], data[1][SIZEOF_SIGNAL - 2]);
 		//printf("num of cycles = %ld, counter = %d, %d\n", cycles, counter_events, counter_events % CALC_SIZE);
 		//printf("%ld\n", cycles);
-		//sprintf((char *)zmq_msg_data(&msg), "%ld", cycles);
-		//zmq_msg_send(&msg, zmq_sock, 0);
 	}
 	printf("\n");
-
+	
 	printf("d0 counts = %d, d1 counts = %d\n", data[0][SIZEOF_SIGNAL - 2], data[1][SIZEOF_SIGNAL - 2]);
 	printf("num of cycles end = %ld\n", cycles);
  
+	get_det_counts(data, intens, 1);
+	for (i = 0; i < DET_NUM; i++) {
+		printf("counts[%d] = %08d | get_flag = %d\n", i, intens[i].d_counts, intens[i].get_flag);
+	}
+
+	//Save histo
+	save_histo_in_file(out_histo_fd, histo_en, start);
 	save_histo_in_ascii(out_foldername, histo_en, start);
 
 	exit_controller(usb_h);
