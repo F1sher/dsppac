@@ -3,6 +3,7 @@
 import json
 import gi
 import os
+import signal
 import subprocess
 import socket
 import time
@@ -21,17 +22,28 @@ ONLINE_EXE = "oconsumer"
 HISTO_FOLDER = "/home/das/job/dsp/test/histos"
 SOCKET_COMMUNICATION_FILE = "./hidden"
 CFG_FILE = "cfg.json"
+CONSTANTS_FILE = "constants.json"
+SLEEP_S_SOCK_READ = 1
 
 
 class StartWin(Gtk.Window):
     
     def __init__(self):
         Gtk.Window.__init__(self, title="DspPAC", resizable=False)
-        
+        self.connect("delete-event", Gtk.main_quit)
+
+        vbox = Gtk.Box()
+        self.add(vbox)
+
+        menubar = self.__create_menubar()
+
         grid = Gtk.Grid()
         grid.set_column_homogeneous(False)
-        self.add(grid)
 
+        vbox.pack_start(menubar, False, False, 0)
+        vbox.pack_start(grid, True, True, 0)
+
+        self.child_pid = -1
         self.prog = HDRAINER_EXE
         self.porog = [90, 90, 90, 90]
         self.delay = 100
@@ -52,14 +64,16 @@ class StartWin(Gtk.Window):
                 combobox_prog.append_text(prog + "(with signals)")
         combobox_prog.set_active(1)
         combobox_prog.connect("changed", self.on_combobox_prog_changed)
-        self.prog = HDRAINER_EXE + "(with signals)" #should be combobox_prog.do_changed()
+        combobox_prog.emit("changed")
 
-        btn_read_data = Gtk.Button(label="Read data")
-        btn_read_data.connect("clicked", self.on_btn_read_data_clicked)
+        btn_start = Gtk.Button(label="Start")
+        btn_start.connect("clicked", self.on_btn_start_clicked)
+        btn_stop = Gtk.Button(label="Stop")
+        btn_stop.connect("clicked", self.on_btn_stop_clicked)
         btn_set_porog = []
         btn_set_porog.append( Gtk.Button(label="Set porog #{:d} - #{:d}".format(1, 4)) )
         btn_set_porog[0].connect("clicked", self.on_btn_set_porog_clicked)
-        
+         
         btn_set_delay = Gtk.Button(label="Set delay")
         btn_set_delay.connect("clicked", self.on_btn_set_delay_clicked)
         btn_coinc_on = Gtk.Button(label="Coinc on")
@@ -94,33 +108,83 @@ class StartWin(Gtk.Window):
         self.statusbar = Gtk.Statusbar()
         self.statusbar.push(self.statusbar.get_context_id("greatings"), "Hello! It's DspPAC. It helps you to start acqusition.")
 
-        grid.attach(btn_read_data, 0, 0, 1, 1)
-        grid.attach(combobox_prog, 1, 0, 1, 1)
-        for i in range(0, 4):
-            grid.attach(self.entry_porog[i], 0, i + 1, 1, 1)
+        line = 0
+        grid.attach(btn_start, 0, line, 1, 1)
+        grid.attach(combobox_prog, 1, line, 1, 1)
+        line += 1
+        grid.attach(btn_stop, 0, line, 1, 1)
+        line += 1
+        for i in range(4):
+            grid.attach(self.entry_porog[i], 0, i + line, 1, 1)
         #    grid.attach(btn_set_porog[i], 1, i + 1, 1, 1)
-        grid.attach(btn_set_porog[0], 1, 1, 1, 1)
-        grid.attach( Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 0, 6, 2, 1 )
-        grid.attach(self.entry_delay, 0, 7, 1, 1)
-        grid.attach(btn_set_delay, 1, 7, 1, 1)
-        grid.attach(btn_reset, 0, 8, 1, 1)
-        grid.attach(btn_coinc_on, 1, 8, 1, 1)
-        grid.attach(self.lbl_intens, 0, 9, 1, 1)
-        grid.attach(btn_coinc_off, 1, 9, 1, 1)
+        grid.attach(btn_set_porog[0], 1, line, 1, 1)
+        line += i + 1
+        grid.attach( Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 0, line, 2, 1 )
+        line += 1
+        grid.attach(self.entry_delay, 0, line, 1, 1)
+        grid.attach(btn_set_delay, 1, line, 1, 1)
+        line += 1
+        grid.attach(btn_reset, 0, line, 1, 1)
+        grid.attach(btn_coinc_on, 1, line, 1, 1)
+        line += 1
+        grid.attach(self.lbl_intens, 0, line, 1, 1)
+        grid.attach(btn_coinc_off, 1, line, 1, 1)
+        line += 1
         
-        grid.attach( Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 0, 10, 2, 1)
-        grid.attach(Gtk.Label("ACQ Time [s]:"), 0, 11, 1, 1)
-        grid.attach(self.entry_time, 1, 11, 1, 1)
-        
-        #grid.attach(self.entry_output_file_histo, 0, 12, 2, 1)
-        grid.attach(self.filechooser_histo, 0, 12, 2, 1)
+        grid.attach( Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 0, line, 2, 1)
+        line += 1
+        grid.attach(Gtk.Label("ACQ Time [s]:"), 0, line, 1, 1)
+        grid.attach(self.entry_time, 1, line, 1, 1)
+        line += 1
 
-        for i in range(0, 4):
+        #grid.attach(self.entry_output_file_histo, 0, 12, 2, 1)
+        grid.attach(self.filechooser_histo, 0, line, 2, 1)
+        line += 1
+
+        for i in range(4):
             grid.attach(Gtk.Label("EN range #" + str(i + 1) + ":"), 0, 13 + i, 1, 1)
             grid.attach(self.entry_en_range[i], 1, 13 + i, 1, 1)
+        line += i + 1
 
         grid.attach(self.statusbar, 0, 17, 2, 1)
+        line += 1
 
+        self.win_counts = self.__win_intens(100)
+
+    def __create_menubar(self):
+        menubar = Gtk.MenuBar()
+        menu_file = Gtk.Menu()
+        menu_tools = Gtk.Menu()
+
+        menu_it_file = Gtk.MenuItem.new_with_label("File")
+        menu_it_quit = Gtk.MenuItem.new_with_label("Quit")
+        menu_it_tools = Gtk.MenuItem.new_with_label("Tools")
+        menu_it_edit_cfg = Gtk.MenuItem.new_with_label("Edit cfg")
+        menu_it_edit_constants = Gtk.MenuItem.new_with_label("Edit constants")
+
+        menu_it_file.set_submenu(menu_file)
+        menu_file.append(menu_it_quit)
+        menu_it_quit.connect("activate", Gtk.main_quit)
+
+        menu_it_tools.set_submenu(menu_tools)
+        menu_tools.append(menu_it_edit_cfg)
+        menu_it_edit_cfg.connect("activate", self.on_edit_file_activate)
+        menu_tools.append(menu_it_edit_constants)
+        menu_it_edit_constants.connect("activate", self.on_edit_file_activate)
+
+        menubar.append(menu_it_file)
+        menubar.append(menu_it_tools)
+
+        return menubar
+
+    def on_edit_file_activate(self, menu_it):
+        lbl = menu_it.get_label()
+        if lbl == "Edit cfg":
+            os.system("gedit {}".format(MAIN_PROG_FOLDER + CFG_FILE))
+        elif lbl == "Edit constants":
+            os.system("gedit {}".format(MAIN_PROG_FOLDER + CONSTANTS_FILE))
+        else:
+            print("Warning: Unknown file to edit")
 
     def __info_dialog(self, primary_text, secondary_text):
         dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, primary_text)
@@ -131,10 +195,9 @@ class StartWin(Gtk.Window):
 
     def on_combobox_prog_changed(self, combobox):
         self.prog = combobox.get_active_text()
-        print("self.prog = {}".format(self.prog))
 
 
-    def on_btn_read_data_clicked(self, btn):
+    def on_btn_start_clicked(self, btn):
         try:
             self.time = int( self.entry_time.get_text() )
         except ValueError:
@@ -166,6 +229,12 @@ class StartWin(Gtk.Window):
         elif self.prog == ONLINE_EXE + "(with signals)":
             self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, ONLINE_EXE), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
 
+    def on_btn_stop_clicked(self, btn):
+        ########### send STOP signal (really SIGUSR1)
+        if self.child_pid > 0:
+            os.kill(self.child_pid, signal.SIGUSR1)
+        ##########
+
 
     def start_C_prog(self, prog_name, prog_path, prog_params):
         pid = os.fork()
@@ -185,9 +254,11 @@ class StartWin(Gtk.Window):
                 #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-o", output_histo_file)
         else:
             #Parent
+            self.child_pid = pid
+
             if os.path.exists(SOCKET_COMMUNICATION_FILE):
                 os.remove(SOCKET_COMMUNICATION_FILE)
-                
+
             server_fd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server_fd.bind(SOCKET_COMMUNICATION_FILE)
             server_fd.listen(1)
@@ -202,14 +273,13 @@ class StartWin(Gtk.Window):
                 out_str = conn.recv(128)
                 
                 #Count intensity
-                print( "out_str = {} ".format(out_str) )
                 try:
-                    cycles, exe_time = unpack("=2l", out_str)
+                    cycles, exe_time, *diff_counts, exe_m_time = unpack("=7l", out_str)
                 except struct_error_unpack:
                     #End of *DRAINER should be
                     None
                         
-                print("cycles = {}, exe_time = {} | type = {}".format(cycles, exe_time, type(cycles)))
+                print("cycles = {}, execution_time = {} | type = {}".format(cycles, exe_time, type(cycles)))
                     
                 if cycle_prev == -1:
                     cycle_prev = cycles
@@ -227,10 +297,15 @@ class StartWin(Gtk.Window):
                     else:
                         cycles_per_time = (cycle_curr - cycle_prev)/(exe_time_curr - exe_time_prev)
                         self.lbl_intens.set_text("{:d} cnts/s | {:d} s".format(int(cycles_per_time), exe_time_curr))
-                        time.sleep(1)
+                        time.sleep(SLEEP_S_SOCK_READ)
                         while Gtk.events_pending():
                             Gtk.main_iteration_do(False)
                         print("cycle_per_time = {:f}".format(cycles_per_time))
+                        
+                        for i in range(4):
+                            diff_per_s = round( diff_counts[i]/(exe_m_time/1000.0) )
+                            self.win_counts.lbl[i].set_text( "\t Det #{:d} = {:>6d} / s\t".format(i + 1, diff_per_s) )
+                        print("exe_m_time = {:d}".format(exe_m_time))
 
             server_fd.close()
             os.remove(SOCKET_COMMUNICATION_FILE)
@@ -240,9 +315,31 @@ class StartWin(Gtk.Window):
                 self.statusbar.push(self.statusbar.get_context_id("error in " + prog_name), err_msg)
                 print("Error on {} | ret = {}".format(prog_name, ret))
             else:
-                self.lbl_intens.set_text( "{:d} cnts/s | {:d} s".format(0, self.time))
+                self.lbl_intens.set_text( "{:d} cnts/s | {:d} s".format(0, exe_time)) #self.time should be replaced with exe_time 
                 self.statusbar.push(self.statusbar.get_context_id(prog_name + " Ok end"), prog_name + " exits normally")
-                print("Success execution of {}".format(prog_name))
+                print("Success execution of {} | execution_time = {:d}".format(prog_name, exe_time))
+
+    def __win_intens(self, intens):
+        win = Gtk.Window(title="Intensities")
+        win.resize(160, 80)
+
+        vbox = Gtk.Box()
+        win.add(vbox)
+
+        grid = Gtk.Grid()
+        vbox.pack_start(grid, True, True, 0)
+        
+        win.lbl = []
+        win.lbl.append( Gtk.Label("0") )
+        win.lbl.append( Gtk.Label("0") )
+        win.lbl.append( Gtk.Label("0") )
+        win.lbl.append( Gtk.Label("0") )
+
+        for i in range(4):
+            grid.attach(win.lbl[i], 0, i, 1, 1)
+
+        win.show_all()
+        return win
 
 
 
@@ -372,7 +469,6 @@ class StartWin(Gtk.Window):
 
 if __name__ == "__main__":
     win = StartWin()
-    win.connect("delete-event", Gtk.main_quit)
 
     win.show_all()
     Gtk.main()
