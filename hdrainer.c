@@ -242,10 +242,6 @@ int main(int argc, char **argv)
 
 		get_det_counts(data, intens, 0);
 
-#ifdef DEBUG
-		//printf("I'm here line = %d and data was read | counter_events = %d\n", __LINE__, counter_events);
-		//printf("FOR #3 signal: detN = %d | cnts = %d\n", data[3][255], data[3][254]);
-#endif
 		//if signal mode is ON or OFF?
 		if (with_signal_flag == 1) {
 			save_data_in_file(out_fd, data);
@@ -262,16 +258,21 @@ int main(int argc, char **argv)
 
 			get_det_counts(data, intens, 1);
 			//write to socket and check result
+			//cycles == number of read from USB controller. In coinc on mode each read cointains 2 events. Coinc off mode contains 1 event per read.
 			//need to create func prepare_buf_to_sock(long int buf[], start_time, inens_t intens, long int *seconds, long int *u_seconds)
 			buf[0] = cycles; buf[1] = (long)(time(NULL) - start_time);
-			buf[2] = buf[3] = buf[4] = 0;
-			buf[5] = (long)(intens[3].d_counts);
+			for (i = 0; i < DET_NUM; i++) {
+				buf[2 + i] = (long)(intens[i].d_counts);
+			}
+			//buf[2] = buf[3] = buf[4] = 0;
+			//buf[5] = (long)(intens[3].d_counts);
 
 			gettimeofday(&timeval_curr_time, NULL);
 #ifdef DEBUG
+			printf("buf[1] = %ld \n", buf[1]);
 			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
 			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
-#endif		
+#endif	
 			int diff_sec = seconds - timeval_curr_time.tv_sec;
 			int diff_usec = u_seconds - timeval_curr_time.tv_usec;
 			buf[6] = (long)(-1.0*(1000*diff_sec + diff_usec/1000.0));
@@ -297,10 +298,6 @@ int main(int argc, char **argv)
 
 		cycles++;
 		counter_events += 4;
-
-		//printf("d0 counts = %d, d1 counts = %d\n", data[0][SIZEOF_SIGNAL - 2], data[1][SIZEOF_SIGNAL - 2]);
-		//printf("num of cycles = %ld, counter = %d, %d\n", cycles, counter_events, counter_events % CALC_SIZE);
-		//printf("%ld\n", cycles);
 	}
 	printf("\n");
 	
