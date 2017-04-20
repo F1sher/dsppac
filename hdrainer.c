@@ -10,7 +10,7 @@
 volatile int read_cycle_flag = 1;
 static unsigned long int cycles = 0;
 const char *CONST_file_path = "/home/das/job/dsp/constants.json";
-const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res";
+const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res.sgnl";
 int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
 double t_scale[2] = {100.0, 10.0};
 
@@ -134,7 +134,33 @@ int main(int argc, char **argv)
 
 	int out_fd = open(HDrainer_res_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (out_fd == -1) {
+		exit_controller(usb_h);
+
+		free_mem_data(&data);
+
 		perror("Error in open file for drainer");
+
+		return -1;
+	}
+	
+	int len_out_foldername = strlen(out_foldername);
+	char out_sgnl_filename[1024];
+	if (out_foldername[len_out_foldername-1] == '/') {
+		snprintf(out_sgnl_filename, 1024, "%s%s", out_foldername, "hdrainer_res.sgnl");
+	}
+	else {
+		snprintf(out_sgnl_filename, 1024, "%s/%s", out_foldername, "hdrainer_res.sgnl");
+	}
+	
+	int out_sgnl_fd = open(out_sgnl_filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	if (out_sgnl_fd == -1) {
+		exit_controller(usb_h);
+
+		free_mem_data(&data);
+
+		close(out_fd);
+
+		perror("Error in open file for signal drainer");
 
 		return -1;
 	}
@@ -147,9 +173,9 @@ int main(int argc, char **argv)
 	einfo_t **events = NULL;
 	res = alloc_mem_events(&events);
 	if (res != 0) {
-		free_mem_data(&data);
-
 		exit_controller(usb_h);
+
+		free_mem_data(&data);
 
 		fprintf(stderr, "Error in alloc_mem_events()\n");
 
@@ -206,10 +232,12 @@ int main(int argc, char **argv)
 	signal(SIGUSR1, catch_sigusr1);
 
 	//set start time
-	time_t start_time = time(NULL);
 	struct timeval timeval_start_time, timeval_curr_time;
-	
 	gettimeofday(&timeval_start_time, NULL);
+
+	//time_t start_time = time(NULL);
+	long int start_time = 1000*timeval_start_time.tv_sec + timeval_start_time.tv_usec/1000;
+	
 	long int seconds = timeval_start_time.tv_sec;
 	long int u_seconds = timeval_start_time.tv_usec;
 	
@@ -244,7 +272,10 @@ int main(int argc, char **argv)
 
 		//if signal mode is ON or OFF?
 		if (with_signal_flag == 1) {
+			//save to HDrainer_res_file
 			save_data_in_file(out_fd, data);
+			//save to signal file in directory with histo
+			save_data_in_file(out_sgnl_fd, data);
 		}
 
 		if ((counter_events % CALC_SIZE == 0) && (counter_events != 0)) {
@@ -260,19 +291,20 @@ int main(int argc, char **argv)
 			//write to socket and check result
 			//cycles == number of read from USB controller. In coinc on mode each read cointains 2 events. Coinc off mode contains 1 event per read.
 			//need to create func prepare_buf_to_sock(long int buf[], start_time, inens_t intens, long int *seconds, long int *u_seconds)
-			buf[0] = cycles; buf[1] = (long)(time(NULL) - start_time);
-			for (i = 0; i < DET_NUM; i++) {
-				buf[2 + i] = (long)(intens[i].d_counts);
-			}
-			//buf[2] = buf[3] = buf[4] = 0;
-			//buf[5] = (long)(intens[3].d_counts);
-
 			gettimeofday(&timeval_curr_time, NULL);
 #ifdef DEBUG
 			printf("buf[1] = %ld \n", buf[1]);
 			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
 			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
 #endif	
+			buf[0] = cycles; 
+			//buf[1] = (long)(time(NULL) - start_time);
+			buf[1] = (long)(1000*(timeval_curr_time.tv_sec) + timeval_curr_time.tv_usec/1000 - start_time);
+
+			for (i = 0; i < DET_NUM; i++) {
+				buf[2 + i] = (long)(intens[i].d_counts);
+			}
+
 			int diff_sec = seconds - timeval_curr_time.tv_sec;
 			int diff_usec = u_seconds - timeval_curr_time.tv_usec;
 			buf[6] = (long)(-1.0*(1000*diff_sec + diff_usec/1000.0));
@@ -289,7 +321,7 @@ int main(int argc, char **argv)
 		}
 
 		for (i = 0; i < 4; i++) { //add condition to check if ((counter_events + i) < CALC_SIZE)
-			calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
+			calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_line_signal);
 
 #ifdef DEBUG
 			//printf("area = %.2e, time = %.2e, det = %d\n", events[counter_events + i]->en, events[counter_events + i]->t, events[counter_events + i]->det);

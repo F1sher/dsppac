@@ -9,7 +9,9 @@ static const int SIZEOF_DATA_EP = 2048;
 const int SIZEOF_SIGNAL = 256;
 static const int CONTROL_REQUEST_TYPE_IN = LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE;
 
-const int CALC_SIZE = 10000;
+const int DET_NUM = 4;
+
+const int CALC_SIZE = 20000;
 const int HIST_SIZE = 4096;
 double T_SCALE[2] = {100.0, 10.0};
 const int EN_THRESHOLD = 10;
@@ -18,6 +20,7 @@ double Tau_trap = 0.95;
 unsigned int K_trap = 2;
 unsigned int L_trap = 12;
 unsigned int I_MIN_S_SHIFT_trap = 5;
+unsigned int AVERAGE_trap = 10;
 int INTEGRAL_steps_back = 10;
 int INTEGRAL_steps_forw = 20;
 double EN_normal = 4096.0/2000.0;
@@ -264,6 +267,7 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	}
 	//...check malloc errors...
 
+	
 	while ( (res = control_test(usb_h, CONTROL_REQUEST_TYPE_IN)) != 1 ) {
 		#ifdef DEBUG
 		test_cntrl++;
@@ -271,10 +275,11 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 
 		;
 	}
+	
 	#ifdef DEBUG
-	if (test_cntrl != 0) {
-		printf("test_cntrl = %d\n", test_cntrl);
-	}
+	//if (test_cntrl != 0) {
+	//	printf("test_cntrl = %d\n", test_cntrl);
+	//}
 	#endif
 
 	res = cyusb_bulk_transfer(usb_h, IN_EP, buf, SIZEOF_DATA_EP, &trans, 100);
@@ -289,10 +294,11 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	}
 
 	for (i = 0; i < 4; i++) {
+		//Set Det number
 		det_num = (buf[2*SIZEOF_SIGNAL*(i + 1) - 1] >> 6) + 1;
-		//counter
-		//det_counts = (buf[2*SIZEOF_SIGNAL*(i)] << 24)  + (buf[2*SIZEOF_SIGNAL*(i) + 1] << 16) + (buf[2*SIZEOF_SIGNAL*(i) + 2] << 8) + buf[2*SIZEOF_SIGNAL*(i) + 3];
-		det_counts = 8000;
+		//Set Counter
+		det_counts = (buf[2*SIZEOF_SIGNAL*(i) + 1] << 24)  + (buf[2*SIZEOF_SIGNAL*(i)] << 16) + (buf[2*SIZEOF_SIGNAL*(i) + 3] << 8) + buf[2*SIZEOF_SIGNAL*(i) + 2];
+		//det_counts = 8000;
 
 		for (j = 0; j < SIZEOF_SIGNAL; j++) {
 			data[i][j] = buf[2*SIZEOF_SIGNAL*i + 2*j] + 256*(buf[2*SIZEOF_SIGNAL*i + 2*j + 1] & 0b00111111);
@@ -312,12 +318,49 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	return data;
 }
 
+int get_det_counts(int **data, intens_t intens[], int count_flag)
+{
+	int i, j;
+
+	if (data == NULL) {
+		return -1;
+	}
+
+	//replace DET_NUM with Signal_in_event
+	if (count_flag == 0) {
+		for (i = 0; i < DET_NUM; i++) {
+			j = data[i][SIZEOF_SIGNAL-1] - 1; //get det_num
+			if ( (j < 0) || (j > 3) ) {
+				return -1;
+			}
+
+			if ( (intens[j].get_flag == -1) || (intens[j].get_flag == 0) ) {
+				intens[j].counts = data[i][SIZEOF_SIGNAL - 2]; 
+				intens[j].get_flag++;
+			}
+		}
+	}
+	else if (count_flag == 1) {
+		for (i = 0; i < DET_NUM; i++) {
+			j = data[i][SIZEOF_SIGNAL-1] - 1;
+			if ( (j < 0) || (j > 3) ) {
+				return -1;
+			}
+			
+			if (intens[j].get_flag == 1) {
+				intens[j].d_counts = data[i][SIZEOF_SIGNAL - 2] - intens[j].counts;
+				intens[j].get_flag = 0;
+			}
+		}
+	}
+
+	return 0;
+}
+
 
 //FUNCTIONS FOR CALC EN and T for SIGNALS
-
 double area_trap_signal(int *a)
 {
-    const int Averaging = 10;
     int i = 0;
 	int i_min_s = 0;
 	double res = 0.0;
@@ -388,10 +431,10 @@ double area_trap_signal(int *a)
 	    return 0.0;
     }
     
-    for (i = i_min_s; i < i_min_s + Averaging; i++) { //i<i_min_s + L - K - 1 or 8 - 1
+    for (i = i_min_s; i < i_min_s + (int)AVERAGE_trap; i++) { //i<i_min_s + L - K - 1 or 8 - 1
 		res += cs[i];
     }
-    res = res/(Averaging); //res = res/(L-K-1) or res/8
+    res = res/(AVERAGE_trap); //res = res/(L-K-1) or res/8
 
     free(a_clear); a_clear = NULL;
     free(cTr); cTr = NULL;
@@ -482,6 +525,11 @@ double time_line_signal(int *a)
     }
     
     return x0;
+}
+
+double time_poly_3_signal(int *a)
+{
+	return 0.0;
 }
 
 int calc_en_t(int *data, einfo_t *event, double (*area_f)(int *a), double (*time_f)(int *a))
