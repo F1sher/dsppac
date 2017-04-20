@@ -1,11 +1,11 @@
 {
-	"porog": [90, 90, 90, 90],
-	"delay": 100,
-	"coinc?": "True",
-	"time": 15,
-	"histo folder": "/home/das/job/dsp/test/histos",
-	"en_range 0": [100, 100, 100, 100],
-	"en_range 1": [0, 0, 0, 0],
-	"en_range 2": [850, 900, 900, 900],
-	"en_range 3": [850, 900, 850, 900]
+	"porog for detectors": [90, 90, 90, 90],
+	"time of coincidence [ch]": 80,
+	"coinc mode?": "True",
+	"time of exposition [s]": 22,
+	"histo folder": "/home/das/job/dsp/test/histos_",
+	"en_range D1": [100, 100, 100, 100],
+	"en_range D2": [1, 1, 2, 3],
+	"en_range D3": [0, 4095, 0, 4095],
+	"en_range D4": [0, 4095, 0, 4095]
 }
