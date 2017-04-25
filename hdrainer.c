@@ -292,11 +292,7 @@ int main(int argc, char **argv)
 			//cycles == number of read from USB controller. In coinc on mode each read cointains 2 events. Coinc off mode contains 1 event per read.
 			//need to create func prepare_buf_to_sock(long int buf[], start_time, inens_t intens, long int *seconds, long int *u_seconds)
 			gettimeofday(&timeval_curr_time, NULL);
-#ifdef DEBUG
-			printf("buf[1] = %ld \n", buf[1]);
-			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
-			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
-#endif	
+
 			buf[0] = cycles; 
 			//buf[1] = (long)(time(NULL) - start_time);
 			buf[1] = (long)(1000*(timeval_curr_time.tv_sec) + timeval_curr_time.tv_usec/1000 - start_time);
@@ -304,6 +300,12 @@ int main(int argc, char **argv)
 			for (i = 0; i < DET_NUM; i++) {
 				buf[2 + i] = (long)(intens[i].d_counts);
 			}
+
+#ifdef DEBUG
+			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
+			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
+			printf("Intens det #3 = %d\n", intens[2].d_counts);
+#endif	
 
 			int diff_sec = seconds - timeval_curr_time.tv_sec;
 			int diff_usec = u_seconds - timeval_curr_time.tv_usec;
