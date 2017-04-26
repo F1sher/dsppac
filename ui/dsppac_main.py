@@ -108,8 +108,8 @@ class UI():
     def init_Figs(self):
         def create_title(i):
             titles = ["D1-D2", "D2-D1", "D1-D3", "D3-D1",
-                      "D1-D4", "D4-D1", "D2-D4", "D4-D2",
-                      "D2-D3", "D3-D2", "D3-D4", "D4-D3"]
+                      "D1-D4", "D4-D1", "D2-D3", "D3-D2",
+                      "D2-D4", "D4-D2", "D3-D4", "D4-D3"]
             
             return titles[i]
 
@@ -216,7 +216,7 @@ class UI():
             self.t_axes[i].set_ylim(top = max_histo_t)
 
     def update_Figs(self, histo):
-        print("!!!!!!!!!!!!UPDATE!!!!!!!!!")
+        print("!!!UPDATE!!!")
 
         histo_np_arr = np.array(histo)
 
@@ -348,7 +348,11 @@ class UI():
 
         self.curr_histo_folder = self.fpga.histo_folder
 
-        prog_name = const.HDRAINER_EXE + "(with signals)"
+        print("signal flag = {}".format(self.fpga.with_signals_flag))
+        if self.fpga.with_signals_flag:
+            prog_name = const.HDRAINER_EXE + "(with signals)"
+        else:
+            prog_name = const.HDRAINER_EXE
         self.hdrainer = Hdrainer(prog_name, self.fpga.acq_time, self.fpga.coinc, self.fpga.en_range, self.fpga.histo_folder)
         
         self.thread_args = {"ret": -1}
@@ -685,7 +689,8 @@ class FPGA():
             self.entry_en_range[i].set_text( str(self.en_range[i])[1:-1] )
 
     def get_entries(self):
-        self.with_signals_flag = self.switch_hdrainer.get_state()
+        self.with_signals_flag = self.switch_hdrainer.get_active()
+        print("signal flag = {}".format(self.with_signals_flag))
 
         for i in range(0, const.DET_NUM):
             self.porog[i] = int(self.entry_porog[i].get_text())
@@ -754,6 +759,8 @@ class Hdrainer():
             #Parent
             self.child_pid = pid
 
+            #old AF_UNIX socke
+            '''
             if os.path.exists(const.SOCKET_COMMUNICATION_FILE):
                 os.remove(const.SOCKET_COMMUNICATION_FILE)
 
@@ -761,21 +768,44 @@ class Hdrainer():
             server_fd.settimeout(10)
             server_fd.bind(const.SOCKET_COMMUNICATION_FILE)
             server_fd.listen(1)
+            '''
 
             cycle_prev, cycle_curr = -1, -1
             exe_time_prev, exe_time_curr = -1, -1
+            
+            #old AF_UNIX sock
+            '''
             try:
                 conn, address = server_fd.accept()
             except sock_timeout:
                 print("Timeout socket accept")
                 return -1
+            '''
+            
+            import zmq
+            
+            context = zmq.Context()
+            zmq_subscriber = context.socket(zmq.SUB)
+            zmq_subscriber.connect("tcp://localhost:5556")
+            zmq_subscriber.setsockopt(zmq.SUBSCRIBE, b"")
 
             while True:
                 w_pid, ret = os.waitpid(pid, os.WNOHANG)
                 if w_pid == pid:
+                    print("Break hdrainer cycle")
                     break
-                out_str = conn.recv(128)
+                    
+                #old AF_UNIX sock
+                #out_str = conn.recv(128)                
                 
+                #should be with NONBLOCK flag and try except
+                print("wait receiving ...")
+                try:
+                    out_str = zmq_subscriber.recv(flags=zmq.NOBLOCK)
+                except zmq.ZMQError:
+                    print("No msg in zmq queue")
+                    out_str = b"" #???
+
                 #Count intensity
                 try:
                     cycles, exe_time, *diff_counts, exe_m_time = unpack("=7l", out_str)
@@ -827,9 +857,11 @@ class Hdrainer():
 
                 sleep(const.SLEEP_S_SOCK_READ)
 
+            #old AF_UNIX sock
+            '''
             server_fd.close()
             os.remove(const.SOCKET_COMMUNICATION_FILE)
-
+            '''
         return 0
     
     def stop(self):

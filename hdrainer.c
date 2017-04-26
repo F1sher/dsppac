@@ -14,6 +14,8 @@ const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res.sgnl";
 int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
 double t_scale[2] = {100.0, 10.0};
 
+const int zmq_sock_num = 5556;
+
 const char *socket_communication_path = "./hidden";
 int create_socket(const char *socket_path)
 {
@@ -44,6 +46,29 @@ int create_socket(const char *socket_path)
 	}
 
 	return fd;
+}
+
+void *create_zmq_socket(int port_num)
+{
+	void *context = zmq_ctx_new();
+	void *publisher_sock = zmq_socket(context, ZMQ_PUB);
+
+	char temp_str[512] = {0};
+	snprintf(temp_str, 512, "tcp://*:%d", port_num);
+	
+	int ret = 0;
+	ret = zmq_bind(publisher_sock, temp_str);
+	if (ret != 0) {
+		zmq_close(publisher_sock);
+		zmq_ctx_destroy(context);
+		
+		//perror?
+		fprintf(stderr, "Fail to bind");
+
+		return NULL;
+	}
+
+	return publisher_sock;
 }
 
 void catch_alarm(int sig_num)
@@ -100,6 +125,9 @@ int main(int argc, char **argv)
 	set_const_params(const_params);
 	
 #ifdef DEBUG
+	printf("L = %d, K = %d | i_min_s = %d AVERAGE_trap = %d\n", L_trap, K_trap, I_MIN_S_SHIFT_trap, AVERAGE_trap);
+	printf("T_SCALE[] = {%.2f, %.2f}\n", T_SCALE[0], T_SCALE[1]);
+
 	printf("\n");
 	int j;
 	for (i = 0; i < 4; i++) {
@@ -207,8 +235,12 @@ int main(int argc, char **argv)
 	}
 	
 	long int buf[7];
+	/*
 	int fd_sock = create_socket(socket_communication_path);
 	if (fd_sock == -1) {
+	*/
+	void *zmq_publisher = create_zmq_socket(zmq_sock_num);
+	if (zmq_publisher == NULL) {
 		exit_controller(usb_h);
 
 		free_mem_data(&data);
@@ -273,7 +305,7 @@ int main(int argc, char **argv)
 		//if signal mode is ON or OFF?
 		if (with_signal_flag == 1) {
 			//save to HDrainer_res_file
-			save_data_in_file(out_fd, data);
+			//save_data_in_file(out_fd, data);
 			//save to signal file in directory with histo
 			save_data_in_file(out_sgnl_fd, data);
 		}
@@ -284,7 +316,7 @@ int main(int argc, char **argv)
 			#endif
 
 			calc_histo(events, en_range, histo_en, start);
-			
+
 			save_histo_in_file(out_histo_fd, histo_en, start);
 
 			get_det_counts(data, intens, 1);
@@ -294,18 +326,11 @@ int main(int argc, char **argv)
 			gettimeofday(&timeval_curr_time, NULL);
 
 			buf[0] = cycles; 
-			//buf[1] = (long)(time(NULL) - start_time);
 			buf[1] = (long)(1000*(timeval_curr_time.tv_sec) + timeval_curr_time.tv_usec/1000 - start_time);
 
 			for (i = 0; i < DET_NUM; i++) {
 				buf[2 + i] = (long)(intens[i].d_counts);
 			}
-
-#ifdef DEBUG
-			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
-			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
-			printf("Intens det #3 = %d\n", intens[2].d_counts);
-#endif	
 
 			int diff_sec = seconds - timeval_curr_time.tv_sec;
 			int diff_usec = u_seconds - timeval_curr_time.tv_usec;
@@ -314,12 +339,23 @@ int main(int argc, char **argv)
 			seconds = timeval_curr_time.tv_sec;
 			u_seconds = timeval_curr_time.tv_usec;
 
+			zmq_send(zmq_publisher, buf, sizeof(buf), 0);
+
+			//old for AF_UNIX sock
+			/*
 			res = write(fd_sock, buf, sizeof(buf));
 			if (res != sizeof(buf)) {
 				fprintf(stderr, "Error in writting to the sock! res = %d\n", res);
 			}
+			*/
 
 			counter_events = 0;
+
+			#ifdef DEBUG
+			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
+			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
+			printf("Intens det #3 = %d\n", intens[2].d_counts);
+#endif
 		}
 
 		for (i = 0; i < 4; i++) { //add condition to check if ((counter_events + i) < CALC_SIZE)
@@ -333,8 +369,8 @@ int main(int argc, char **argv)
 		cycles++;
 		counter_events += 4;
 	}
+
 	printf("\n");
-	
 	printf("d0 counts = %d, d1 counts = %d\n", data[0][SIZEOF_SIGNAL - 2], data[1][SIZEOF_SIGNAL - 2]);
 	printf("num of cycles end = %ld\n", cycles);
  
