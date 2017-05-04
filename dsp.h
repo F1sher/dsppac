@@ -29,16 +29,25 @@ typedef struct {
 	char det;
 } einfo_t;
 
+typedef struct {
+	int get_flag;
+	int counts;
+	int d_counts;
+} intens_t;
+
 
 extern const int SIZEOF_SIGNAL;
 extern const int HIST_SIZE;
 extern const int CALC_SIZE;
+
+extern const int DET_NUM;
 
 extern double EN_normal;
 extern double Tau_trap;
 extern unsigned int K_trap;
 extern unsigned int L_trap;
 extern unsigned int I_MIN_S_SHIFT_trap;
+extern unsigned int AVERAGE_trap;
 extern int INTEGRAL_steps_back;
 extern int INTEGRAL_steps_forw;
 
@@ -84,6 +93,17 @@ int control_send_comm(cyusb_handle *usb_h, const char *comm, int args);
 */
 int **read_data_ep(cyusb_handle *usb_h, int **data);
 
+/**
+   @brief Get counts in detectors
+   @param data the pointer to the data from 4 detectors
+   @param intens the struct with intensities values. intens.d_counts = intens1 (current intensity) - intens0 (prev intensity). get_flag ...
+   @param count_flag flag for the function. IF count_flag == 0 -> intens0 value get. IF count_flag == 1 -> calc d_counts.
+
+   @retval -1 On error.
+   @retval 0 On success.
+*/
+int get_det_counts(int **data, intens_t intens[], int count_flag);
+
 
 //functions for DSP
 /**
@@ -123,6 +143,10 @@ void min_bubble(int *a, int len, int *min, int *min_num);
    @retval value of the time
  */
 double time_line_signal(int *a);
+
+/**
+ */
+double time_cubic_signal(int *a);
 
 /**
    @brief Calculation of the energy and time of the signal.

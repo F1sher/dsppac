@@ -304,9 +304,9 @@ int main(int argc, char **argv)
 
 		//if signal mode is ON or OFF?
 		if (with_signal_flag == 1) {
-			//save to HDrainer_res_file
+			//SAVE to HDrainer_res_file
 			//save_data_in_file(out_fd, data);
-			//save to signal file in directory with histo
+			//SAVE to signal file in directory with histo
 			save_data_in_file(out_sgnl_fd, data);
 		}
 
@@ -330,6 +330,10 @@ int main(int argc, char **argv)
 
 			for (i = 0; i < DET_NUM; i++) {
 				buf[2 + i] = (long)(intens[i].d_counts);
+
+				#ifdef DEBUG
+				printf("buf[%d] = %ld\n", 2+i, buf[2+i]);
+				#endif
 			}
 
 			int diff_sec = seconds - timeval_curr_time.tv_sec;
@@ -351,7 +355,7 @@ int main(int argc, char **argv)
 
 			counter_events = 0;
 
-			#ifdef DEBUG
+#ifdef DEBUG
 			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
 			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
 			printf("Intens det #3 = %d\n", intens[2].d_counts);
@@ -360,10 +364,6 @@ int main(int argc, char **argv)
 
 		for (i = 0; i < 4; i++) { //add condition to check if ((counter_events + i) < CALC_SIZE)
 			calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_line_signal);
-
-#ifdef DEBUG
-			//printf("area = %.2e, time = %.2e, det = %d\n", events[counter_events + i]->en, events[counter_events + i]->t, events[counter_events + i]->det);
-#endif	
 		}
 
 		cycles++;
@@ -378,6 +378,8 @@ int main(int argc, char **argv)
 	for (i = 0; i < DET_NUM; i++) {
 		printf("counts[%d] = %08d | get_flag = %d\n", i, intens[i].d_counts, intens[i].get_flag);
 	}
+	//send zmq_msg here
+
 
 	//Save histo
 	save_histo_in_file(out_histo_fd, histo_en, start);

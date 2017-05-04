@@ -11,7 +11,7 @@ static const int CONTROL_REQUEST_TYPE_IN = LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_T
 
 const int DET_NUM = 4;
 
-const int CALC_SIZE = 20000;
+const int CALC_SIZE = 500;
 const int HIST_SIZE = 4096;
 double T_SCALE[2] = {100.0, 10.0};
 const int EN_THRESHOLD = 10;
@@ -527,9 +527,59 @@ double time_line_signal(int *a)
     return x0;
 }
 
-double time_poly_3_signal(int *a)
+//add
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_spline.h>
+//flag to compile
+// -I/usr/local/include
+
+double time_cubic_signal(int *a)
 {
-	return 0.0;
+    int i = 0;
+    int j = 0;
+	int ret = 0;
+
+    int min_a = -1;
+    int min_a_i = 0;
+    min_bubble(a, SIZEOF_SIGNAL/2, &min_a, &min_a_i);
+
+    double x0 = -1.0;
+
+    double baseline = 0.0;
+    for (i = 0; i < 10; i++) {
+        baseline += (double)a[i];
+    }
+    baseline = baseline/10.0;
+
+	//halder should be off only once in program
+	gsl_set_error_handler_off();
+
+
+    gsl_interp_accel *accel = gsl_interp_accel_alloc();
+    gsl_spline *spline = gsl_spline_alloc(gsl_interp_cspline, 4);
+
+    double xa[4];
+    double ya[4];
+    for (i = 3; i >= 0; i--) {
+		//printf("in cycle i = %d\n", i);
+		j = min_a_i - i;
+		xa[i] = (double)j;
+		ya[i] = (double)a[j];
+    }
+
+	printf("ya = {%.2f, %.2f, %.2f, %.2f}\n", ya[0], ya[1], ya[2], ya[3]);
+
+    //we are interesting in x0 position for time stamp | we swap X and Y
+    ret = gsl_spline_init(spline, ya, xa, 4);
+	if (ret == 0) {
+		double edge = baseline - CFT_fraction*(baseline - min_a);
+		x0 = gsl_spline_eval(spline, edge, accel);
+	}
+
+    gsl_spline_free(spline);
+    gsl_interp_accel_free(accel);
+
+    return x0;
 }
 
 int calc_en_t(int *data, einfo_t *event, double (*area_f)(int *a), double (*time_f)(int *a))
@@ -788,6 +838,8 @@ int calc_histo(einfo_t **events, int en_range[][4], unsigned int **histo_en, uns
 					break;
 				}
 			}
+
+			//printf("n1 = %d, n2 = %d | s1 = %d, s2 = %d | dtime = %d\n", n1, n2, s1, s2, dtime);
 			
 			if ( (n1 == 1) && (n2 == 2) ) {
 				if ( (s1 >= en_range[0][0]) && (s1 <= en_range[0][1]) && (s2 >= en_range[1][2]) && (s2 <= en_range[1][3]) ) {

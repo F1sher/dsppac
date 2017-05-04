@@ -471,6 +471,7 @@ class UI():
 
     
     def statusbar_push(self, context, normal_msg="", err_msg=""):
+        print("context = {}".format(context))
         context_id = self.statusbar.get_context_id(context)
         if err_msg:
             msg = "!Error!: " + err_msg
@@ -806,7 +807,8 @@ class Hdrainer():
                     print("No msg in zmq queue")
                     out_str = b"" #???
 
-                #Count intensity
+                #Count intensity and execution time
+                #remove exe_m_time since exe_time in microseconds!
                 try:
                     cycles, exe_time, *diff_counts, exe_m_time = unpack("=7l", out_str)
                 except struct_error:
@@ -832,10 +834,10 @@ class Hdrainer():
                     if cycle_curr == -1:
                         cycle_curr = cycles
                         exe_time_curr = exe_time
-                        
                     else:
                         cycle_prev, cycle_curr = cycle_curr, cycles
                         exe_time_prev, exe_time_curr = exe_time_curr, exe_time
+
                     if (exe_time_curr - exe_time_prev == 0):
                         None
                     else:
