@@ -760,28 +760,11 @@ class Hdrainer():
             #Parent
             self.child_pid = pid
 
-            #old AF_UNIX socke
-            '''
-            if os.path.exists(const.SOCKET_COMMUNICATION_FILE):
-                os.remove(const.SOCKET_COMMUNICATION_FILE)
-
-            server_fd = socket(AF_UNIX, SOCK_STREAM)
-            server_fd.settimeout(10)
-            server_fd.bind(const.SOCKET_COMMUNICATION_FILE)
-            server_fd.listen(1)
-            '''
-
             cycle_prev, cycle_curr = -1, -1
             exe_time_prev, exe_time_curr = -1, -1
-            
-            #old AF_UNIX sock
-            '''
-            try:
-                conn, address = server_fd.accept()
-            except sock_timeout:
-                print("Timeout socket accept")
-                return -1
-            '''
+
+            counts_prev = [-1, -1, -1, -1]
+            counts_curr = [-1, -1, -1, -1]
             
             import zmq
             
@@ -795,10 +778,7 @@ class Hdrainer():
                 if w_pid == pid:
                     print("Break hdrainer cycle")
                     break
-                    
-                #old AF_UNIX sock
-                #out_str = conn.recv(128)                
-                
+
                 #should be with NONBLOCK flag and try except
                 print("wait receiving ...")
                 try:
@@ -810,13 +790,13 @@ class Hdrainer():
                 #Count intensity and execution time
                 #remove exe_m_time since exe_time in microseconds!
                 try:
-                    cycles, exe_time, *diff_counts, exe_m_time = unpack("=7l", out_str)
+                    cycles, exe_time, *counts, exe_m_time = unpack("=7l", out_str)
                 except struct_error:
                     #End of *DRAINER should be OR syncro problems
-                    print("Struct unpack error | out_str = {} (len={})".format(out_str, len(out_str)))
+                    print("STRUCT UNPACK ERROR | out_str = {} (len={})".format(out_str, len(out_str)))
                     cycles = 0
                     exe_time = 0
-                    diff_counts = [0, 0, 0, 0]
+                    counts = [0, 0, 0, 0]
                     exe_m_time = 1
                     None
                 
@@ -848,7 +828,8 @@ class Hdrainer():
                             Gtk.main_iteration_do(False)
                         
                         print("cycle_per_time = {:f}".format(self.cycles_per_time))
-                        
+
+                        '''
                         for i in range(4):
                             diff_per_s = round( diff_counts[i]/(exe_m_time/1000.0) )
                             self.det_counts[i] = diff_per_s
@@ -856,14 +837,35 @@ class Hdrainer():
                             print("det_counts[{}] = {}".format(i, self.det_counts[i]))
                         
                         print("exe_m_time = {:d}".format(exe_m_time))
+                        '''
+                        
+                        if counts != [0, 0, 0, 0]:
+                            for i in range(const.DET_NUM):
+                                self.det_counts[i] = 0
+                                
+                                if counts_prev[i] == -1:
+                                    counts_prev[i] = counts[i]
+                                else:
+                                    print("counts = {}".format(counts))
+                                    print("counts_prev = {} | counts_curr = {}".format(counts_prev, counts_curr))
+                                
+                                    if counts_curr[i] == -1:
+                                        counts_curr[i] = counts[i]
+                                    else:
+                                        counts_prev[i] = counts_curr[i]
+                                        counts_curr[i] = counts[i]
+                                        
+                                        diff_per_s = round( (counts_curr[i] - counts_prev[i])/(exe_m_time/1000) )
+                                        self.det_counts[i] = diff_per_s
+                                    
+                                    print("det_couns[{}] = {}".format(i, self.det_counts[i]))
+                                
+                        print("exe_m_time = {:d}".format(exe_m_time))
+
+
 
                 sleep(const.SLEEP_S_SOCK_READ)
 
-            #old AF_UNIX sock
-            '''
-            server_fd.close()
-            os.remove(const.SOCKET_COMMUNICATION_FILE)
-            '''
         return 0
     
     def stop(self):

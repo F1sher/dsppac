@@ -304,8 +304,6 @@ int main(int argc, char **argv)
 
 		//if signal mode is ON or OFF?
 		if (with_signal_flag == 1) {
-			//SAVE to HDrainer_res_file
-			//save_data_in_file(out_fd, data);
 			//SAVE to signal file in directory with histo
 			save_data_in_file(out_sgnl_fd, data);
 		}
@@ -319,7 +317,8 @@ int main(int argc, char **argv)
 
 			save_histo_in_file(out_histo_fd, histo_en, start);
 
-			get_det_counts(data, intens, 1);
+			//get_det_counts(data, intens, 1);
+			
 			//write to socket and check result
 			//cycles == number of read from USB controller. In coinc on mode each read cointains 2 events. Coinc off mode contains 1 event per read.
 			//need to create func prepare_buf_to_sock(long int buf[], start_time, inens_t intens, long int *seconds, long int *u_seconds)
@@ -329,7 +328,7 @@ int main(int argc, char **argv)
 			buf[1] = (long)(1000*(timeval_curr_time.tv_sec) + timeval_curr_time.tv_usec/1000 - start_time);
 
 			for (i = 0; i < DET_NUM; i++) {
-				buf[2 + i] = (long)(intens[i].d_counts);
+				buf[2 + i] = (long)(intens[i].counts);
 
 				#ifdef DEBUG
 				printf("buf[%d] = %ld\n", 2+i, buf[2+i]);
@@ -344,15 +343,6 @@ int main(int argc, char **argv)
 			u_seconds = timeval_curr_time.tv_usec;
 
 			zmq_send(zmq_publisher, buf, sizeof(buf), 0);
-
-			//old for AF_UNIX sock
-			/*
-			res = write(fd_sock, buf, sizeof(buf));
-			if (res != sizeof(buf)) {
-				fprintf(stderr, "Error in writting to the sock! res = %d\n", res);
-			}
-			*/
-
 			counter_events = 0;
 
 #ifdef DEBUG

@@ -336,7 +336,8 @@ int get_det_counts(int **data, intens_t intens[], int count_flag)
 
 			if ( (intens[j].get_flag == -1) || (intens[j].get_flag == 0) ) {
 				intens[j].counts = data[i][SIZEOF_SIGNAL - 2]; 
-				intens[j].get_flag++;
+				intens[j].get_flag = 0;
+				//intens[j].get_flag++;
 			}
 		}
 	}
