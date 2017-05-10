@@ -1,7 +1,8 @@
 CC=g++
 CFLAGS=-g -Wall -O0
-LFLAGS=-L ./lib/ 
-LIBS=-lcyusb -lusb-1.0 -lm
+LFLAGS=-L ./lib/
+IFLAGS=-I/usr/local/include
+LIBS=-lcyusb -lusb-1.0 -lm -ljsmn
 DEPS=../dsp.h ../dsp.c ../parse_args.h ../parse_args.c
 SRCS=../dsp.c ../parse_args.c
 
@@ -15,13 +16,16 @@ drainer: $(DEPS) ../drainer.c
 	$(CC) -o $@ ../drainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
 hdrainer: $(DEPS) ../hdrainer.c
-	$(CC) -o $@ ../hdrainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS) -lzmq -DDEBUG
+	$(CC) -o $@ ../hdrainer.c $(SRCS) $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lzmq -lgsl -lgslcblas -DDEBUG 
 
 oconsumer: $(DEPS) ../oconsumer.c
 	$(CC) -o $@ ../oconsumer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
 send_comm: $(DEPS) ../send_comm.c
 	$(CC) -o $@ ../send_comm.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
+
+usb_speedtest: $(DEPS) ../usb_speedtest.c
+	$(CC) -o $@ ../usb_speedtest.c $(SRCS) $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lgsl -lgslcblas -DDEBUG
 
 clean:
 	rm ./*.o
