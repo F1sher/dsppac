@@ -554,27 +554,26 @@ double time_cubic_signal(int *a)
 
 	//halder should be off only once in program
 	gsl_set_error_handler_off();
-
+	//
 
     gsl_interp_accel *accel = gsl_interp_accel_alloc();
     gsl_spline *spline = gsl_spline_alloc(gsl_interp_cspline, 4);
 
+	double edge = baseline - CFT_fraction*(baseline - min_a);
     double xa[4];
     double ya[4];
     for (i = 3; i >= 0; i--) {
-		//printf("in cycle i = %d\n", i);
 		j = min_a_i - i;
 		xa[i] = (double)j;
-		ya[i] = (double)a[j];
+		ya[i] = (double)a[j] - edge;
     }
 
-	printf("ya = {%.2f, %.2f, %.2f, %.2f}\n", ya[0], ya[1], ya[2], ya[3]);
+	//printf("ya = {%.2f, %.2f, %.2f, %.2f}\n", ya[0], ya[1], ya[2], ya[3]);
 
-    //we are interesting in x0 position for time stamp | we swap X and Y
-    ret = gsl_spline_init(spline, ya, xa, 4);
+    //we are interesting in x0 position for time stamp
+    ret = gsl_spline_init(spline, xa, ya, 4);
 	if (ret == 0) {
-		double edge = baseline - CFT_fraction*(baseline - min_a);
-		x0 = gsl_spline_eval(spline, edge, accel);
+		x0 = gsl_spline_eval(spline, 0.0, accel);
 	}
 
     gsl_spline_free(spline);
@@ -1057,8 +1056,10 @@ int save_histo_in_ascii(const char *foldername, unsigned int **histo_en, unsigne
 		strncpy(tempstr, "", 512);
 	}
 
+	const char *t_file_names[] = {"t12", "t21", "t13", "t31", "t14", "t41", "t23", "t32", "t24", "t42", "t34", "t43"};
 	for (i = 4; i < 16; i++) {
-		sprintf(tempstr, "%s/t%d", foldername, i - 4);
+		//sprintf(tempstr, "%s/t%d", foldername, i - 4);
+		sprintf(tempstr, "%s/%s", foldername, t_file_names[i-4]);
 		out_file[i] = fopen(tempstr, "w+");
 		if (out_file[i] == NULL) {
 			perror("");

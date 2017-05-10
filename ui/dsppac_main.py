@@ -782,7 +782,8 @@ class Hdrainer():
                 #should be with NONBLOCK flag and try except
                 print("wait receiving ...")
                 try:
-                    out_str = zmq_subscriber.recv(flags=zmq.NOBLOCK)
+                    #out_str = zmq_subscriber.recv(flags=zmq.NOBLOCK)
+                    out_str = zmq_subscriber.recv()
                 except zmq.ZMQError:
                     print("No msg in zmq queue")
                     out_str = b"" #???
@@ -855,7 +856,8 @@ class Hdrainer():
                                         counts_prev[i] = counts_curr[i]
                                         counts_curr[i] = counts[i]
                                         
-                                        diff_per_s = round( (counts_curr[i] - counts_prev[i])/(exe_m_time/1000) )
+                                        #diff_per_s = round( (counts_curr[i] - counts_prev[i])/(exe_m_time/1000) )
+                                        diff_per_s = round( (counts_curr[i] - counts_prev[i])/(exe_time_curr - exe_time_prev) )
                                         self.det_counts[i] = diff_per_s
                                     
                                     print("det_couns[{}] = {}".format(i, self.det_counts[i]))

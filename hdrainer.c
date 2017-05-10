@@ -8,6 +8,7 @@
 #include "parse_args.h"
 
 volatile int read_cycle_flag = 1;
+
 static unsigned long int cycles = 0;
 const char *CONST_file_path = "/home/das/job/dsp/constants.json";
 const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res.sgnl";
@@ -17,36 +18,6 @@ double t_scale[2] = {100.0, 10.0};
 const int zmq_sock_num = 5556;
 
 const char *socket_communication_path = "./hidden";
-int create_socket(const char *socket_path)
-{
-	struct sockaddr_un addr;
-	int ret = 0;
-	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (fd == -1) {
-		perror("socket() error");
-
-		return -1;
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sun_family = AF_UNIX;
-	if (*socket_path == '\0') {
-		*addr.sun_path = '\0';
-		strncpy(addr.sun_path + 1, socket_path + 1, sizeof(addr.sun_path) - 2);
-	}
-	else {
-		strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path));
-	}
-
-	ret = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
-	if (ret == -1) {
-		perror("connect() error");
-
-		return -1;
-	}
-
-	return fd;
-}
 
 void *create_zmq_socket(int port_num)
 {
@@ -67,6 +38,9 @@ void *create_zmq_socket(int port_num)
 
 		return NULL;
 	}
+
+	//TEST option. Should be tested carefully
+	zmq_setsockopt(publisher_sock, ZMQ_CONFLATE, NULL, 0);
 
 	return publisher_sock;
 }
@@ -363,13 +337,13 @@ int main(int argc, char **argv)
 	printf("\n");
 	printf("d0 counts = %d, d1 counts = %d\n", data[0][SIZEOF_SIGNAL - 2], data[1][SIZEOF_SIGNAL - 2]);
 	printf("num of cycles end = %ld\n", cycles);
- 
-	get_det_counts(data, intens, 1);
-	for (i = 0; i < DET_NUM; i++) {
-		printf("counts[%d] = %08d | get_flag = %d\n", i, intens[i].d_counts, intens[i].get_flag);
-	}
-	//send zmq_msg here
 
+	//send last zmq msg
+	buf[0] = cycles;
+	buf[1] = time_acq;
+	buf[2] = buf[3] = buf[4] = buf[5] = 0;
+	buf[6] = 0;
+	zmq_send(zmq_publisher, buf, sizeof(buf), 0);
 
 	//Save histo
 	save_histo_in_file(out_histo_fd, histo_en, start);
