@@ -39,6 +39,9 @@ typedef struct {
 extern const int SIZEOF_SIGNAL;
 extern const int HIST_SIZE;
 extern const int CALC_SIZE;
+//CALC_TIME in seconds
+extern const int CALC_TIME;
+extern const int ZMQ_READ_TIME;
 
 extern const int DET_NUM;
 
@@ -213,6 +216,9 @@ void close_files_for_histo(int **out_histo_fd);
  */
 int save_histo_in_ascii(const char *foldername, unsigned int **histo_en, unsigned int **start);
 
+int open_file_EbE(const char *filename);
+int fill_EbE(int fd, einfo_t **events);
+
 //FUNCTIONS for TRANSFER DATA EVENT trough FIFO
 /**
    @brief Creates FIFO files for online mode. Should be closed when unused.
@@ -250,7 +256,7 @@ int save_data_in_FIFO(unsigned int **histo_en, unsigned int **start);
 int close_fifo(int ***fds);
 
 //function for histo calculation
-int calc_histo(einfo_t **events, int en_range[][4], unsigned int **histo_en, unsigned int **start);
+int calc_histo(einfo_t **events, int calc_size, int en_range[][4], unsigned int **histo_en, unsigned int **start);
 
 //functions for working with memory
 int alloc_mem_data(int ***data);

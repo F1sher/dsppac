@@ -7,7 +7,12 @@
 #include "dsp.h"
 #include "parse_args.h"
 
+const int TIMER_ALARM_S = 1;
+
 volatile int read_cycle_flag = 1;
+volatile int calc_flag = 0;
+volatile int zmq_read_flag = 0;
+unsigned int time_acq = 100;
 
 static unsigned long int cycles = 0;
 const char *CONST_file_path = "/home/das/job/dsp/constants.json";
@@ -19,10 +24,18 @@ const int zmq_sock_num = 5556;
 
 const char *socket_communication_path = "./hidden";
 
+
 void *create_zmq_socket(int port_num)
 {
 	void *context = zmq_ctx_new();
 	void *publisher_sock = zmq_socket(context, ZMQ_PUB);
+	
+	//TEST option. Should be tested carefully
+	int conflate = 1;
+	zmq_setsockopt(publisher_sock, ZMQ_CONFLATE, &conflate, sizeof(conflate));
+
+	int watermark = 1;
+	zmq_setsockopt(publisher_sock, ZMQ_SNDHWM, &watermark, sizeof(watermark));
 
 	char temp_str[512] = {0};
 	snprintf(temp_str, 512, "tcp://*:%d", port_num);
@@ -39,9 +52,6 @@ void *create_zmq_socket(int port_num)
 		return NULL;
 	}
 
-	//TEST option. Should be tested carefully
-	zmq_setsockopt(publisher_sock, ZMQ_CONFLATE, NULL, 0);
-
 	return publisher_sock;
 }
 
@@ -50,6 +60,27 @@ void catch_alarm(int sig_num)
 	read_cycle_flag = 0;
 
 	signal(sig_num, catch_alarm);
+}
+
+void catch_timer(int signum, siginfo_t *info, void *ptr)
+{
+	static unsigned int timer = 0;
+	timer++;
+
+	if ( (timer % CALC_TIME == 0) ) {
+		calc_flag = 1;
+	}
+
+	if ( (timer % ZMQ_READ_TIME == 0) ) {
+		zmq_read_flag = 1;
+	}
+
+	if (timer == time_acq) {
+		read_cycle_flag = 0;
+	}
+	else {
+		alarm(TIMER_ALARM_S);
+	}
 }
 
 void catch_sigusr1(int sig_num)
@@ -65,7 +96,6 @@ int main(int argc, char **argv)
 	int i;
 	int res = 0;
 	int with_signal_flag = 0;
-    unsigned int time_acq = 100;
 	const char *out_foldername = NULL;
 	cyusb_handle *usb_h = NULL;
 	const_t const_params = {0};
@@ -200,21 +230,20 @@ int main(int argc, char **argv)
 
 	int *out_histo_fd = open_files_for_histo(out_foldername);
 	if (out_histo_fd == NULL) {
+		exit_controller(usb_h);
+
 		free_mem_data(&data);
 		free_mem_events(&events);
-
-		exit_controller(usb_h);
+		free_mem_histo(&histo_en, &start);
+		
+		close(out_fd);
 
 		return -1;
 	}
 	
-	long int buf[7];
-	/*
-	int fd_sock = create_socket(socket_communication_path);
-	if (fd_sock == -1) {
-	*/
-	void *zmq_publisher = create_zmq_socket(zmq_sock_num);
-	if (zmq_publisher == NULL) {
+	int out_EbE_fd = open_file_EbE("./test/event-by-event.out");
+
+	if (out_EbE_fd == -1) {
 		exit_controller(usb_h);
 
 		free_mem_data(&data);
@@ -230,9 +259,37 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	//set alarm and its handler
-	alarm(time_acq);
-	signal(SIGALRM, catch_alarm);
+	long int buf[7];
+
+	void *zmq_publisher = create_zmq_socket(zmq_sock_num);
+	if (zmq_publisher == NULL) {
+		exit_controller(usb_h);
+
+		free_mem_data(&data);
+		free_mem_events(&events);
+		free_mem_histo(&histo_en, &start);
+		
+		close(out_fd);
+		for (i = 0; i < 16; i++) {
+			close(out_histo_fd[i]);
+		}
+		free(out_histo_fd); out_histo_fd = NULL;
+		close(out_EbE_fd);
+
+		return -1;
+	}
+
+	//set timer alarm and its handler
+	struct sigaction act;
+	memset(&act, 0, sizeof(act));
+
+	act.sa_sigaction = catch_timer;
+	act.sa_flags = SA_SIGINFO;
+	sigfillset(&act.sa_mask);
+
+	sigaction(SIGALRM, &act, NULL);
+
+	alarm(TIMER_ALARM_S);
 
 	//set STOP signal handler
 	signal(SIGUSR1, catch_sigusr1);
@@ -249,12 +306,13 @@ int main(int argc, char **argv)
 	
 
 #ifdef DEBUG
-	printf("line=%d | time = %u\n", __LINE__, time_acq);
+	printf("line=%d | time_acq = %u\n", __LINE__, time_acq);
 	printf("with_signal_flag = %d\n", with_signal_flag);
 #endif
 
 	//Read cycle
 	while (read_cycle_flag) {
+
 		data = read_data_ep(usb_h, data);
 		if (data == NULL) {
 			fprintf(stderr, "Error in read_data_ep()\n");
@@ -270,7 +328,8 @@ int main(int argc, char **argv)
 				close(out_histo_fd[i]);
 			}
 			free(out_histo_fd); out_histo_fd = NULL;
-			
+			close(out_EbE_fd);
+	
 			return -1;
 		}
 
@@ -282,17 +341,25 @@ int main(int argc, char **argv)
 			save_data_in_file(out_sgnl_fd, data);
 		}
 
-		if ((counter_events % CALC_SIZE == 0) && (counter_events != 0)) {
-			#ifdef DEBUG
+		//if ((counter_events % CALC_SIZE == 0) && (counter_events != 0)) {
+
+		if ((calc_flag) && (counter_events != 0)) {
+			calc_flag = 0;
+
+#ifdef DEBUG
 			printf("calc&save histo | send info to socket\n");
-			#endif
+#endif
 
-			calc_histo(events, en_range, histo_en, start);
-
+			calc_histo(events, counter_events, en_range, histo_en, start);
 			save_histo_in_file(out_histo_fd, histo_en, start);
 
-			//get_det_counts(data, intens, 1);
-			
+			fill_EbE(out_EbE_fd, events);
+
+			counter_events = 0;
+		}
+
+		if (zmq_read_flag) {
+			zmq_read_flag = 0;
 			//write to socket and check result
 			//cycles == number of read from USB controller. In coinc on mode each read cointains 2 events. Coinc off mode contains 1 event per read.
 			//need to create func prepare_buf_to_sock(long int buf[], start_time, inens_t intens, long int *seconds, long int *u_seconds)
@@ -317,17 +384,20 @@ int main(int argc, char **argv)
 			u_seconds = timeval_curr_time.tv_usec;
 
 			zmq_send(zmq_publisher, buf, sizeof(buf), 0);
-			counter_events = 0;
-
-#ifdef DEBUG
-			printf("BEFORE sec = %ld, u_sec = %ld\n", seconds, u_seconds);
-			printf("curr: sec = %ld, u_sec = %ld\n", timeval_curr_time.tv_sec, timeval_curr_time.tv_usec);
-			printf("Intens det #3 = %d\n", intens[2].d_counts);
-#endif
 		}
 
-		for (i = 0; i < 4; i++) { //add condition to check if ((counter_events + i) < CALC_SIZE)
-			calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_line_signal);
+		if (counter_events + 4 < CALC_SIZE) {
+			for (i = 0; i < 4; i++) { 
+				res = calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_line_signal);
+				#ifdef DEBUG
+				if (res != 0) {
+					printf("calc_en_t() return %d\n", res);
+				}
+				#endif
+			}
+		}
+		else {
+			printf("Overflow in counter_events\n");
 		}
 
 		cycles++;
@@ -360,6 +430,7 @@ int main(int argc, char **argv)
 		close(out_histo_fd[i]);
 	}
 	free(out_histo_fd); out_histo_fd = NULL;
+	close(out_EbE_fd);
 
 	return 0;
 }

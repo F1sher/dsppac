@@ -11,8 +11,11 @@ static const int CONTROL_REQUEST_TYPE_IN = LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_T
 
 const int DET_NUM = 4;
 
-const int CALC_SIZE = 500;
+const int CALC_SIZE = 10000000;
 const int HIST_SIZE = 4096;
+const int CALC_TIME = 100;
+const int ZMQ_READ_TIME = 2;
+
 double T_SCALE[2] = {100.0, 10.0};
 const int EN_THRESHOLD = 10;
 
@@ -441,6 +444,8 @@ double area_trap_signal(int *a)
     free(cTr); cTr = NULL;
     free(cs); cs = NULL;
     
+	//printf("AREA = %.2f | l, r = %d, %d\n", fabs(res*EN_normal), i_min_s, i_min_s + (int)AVERAGE_trap);
+
     return fabs(res*EN_normal);
 }
 
@@ -528,7 +533,6 @@ double time_line_signal(int *a)
     return x0;
 }
 
-//add
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
 //flag to compile
@@ -571,7 +575,7 @@ double time_cubic_signal(int *a)
 	//printf("ya = {%.2f, %.2f, %.2f, %.2f}\n", ya[0], ya[1], ya[2], ya[3]);
 
     //we are interesting in x0 position for time stamp
-    ret = gsl_spline_init(spline, xa, ya, 4);
+    ret = gsl_spline_init(spline, ya, xa, 4);
 	if (ret == 0) {
 		x0 = gsl_spline_eval(spline, 0.0, accel);
 	}
@@ -590,17 +594,17 @@ int calc_en_t(int *data, einfo_t *event, double (*area_f)(int *a), double (*time
 
     event->en = (*area_f)(data);
 	if (fabs(event->en + 1.0) < EPS) {
-		return -1;
+		return -2;
 	}
 
 	event->t = (*time_f)(data);
 	if ((event->t - SIZEOF_SIGNAL) > EPS) {
-		return -1;
+		return -3;
 	}
 
-    event->det = data[SIZEOF_SIGNAL-1];
-	if ( (event->det < 0) || (event->det > 3) ) {
-		return -1;
+    event->det = data[SIZEOF_SIGNAL - 1];
+	if (( (event->det) < 1 ) || ( (event->det) > 4 )) { 
+		return -4;
 	}
 
 	return 0;
@@ -794,7 +798,7 @@ int b_definitely_greater_a(double a, double b)
     return (b - a) > ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a))*EPS );
 }
 
-int calc_histo(einfo_t **events, int en_range[][4], unsigned int **histo_en, unsigned int **start)
+int calc_histo(einfo_t **events, int calc_size, int en_range[][4], unsigned int **histo_en, unsigned int **start) //add size to events
 {
 	int i, j;
 	int n1 = 0;
@@ -805,7 +809,7 @@ int calc_histo(einfo_t **events, int en_range[][4], unsigned int **histo_en, uns
 	int dtime = 0;
 	const double c = 2.0*T_SCALE[0]*T_SCALE[1]/HIST_SIZE;
 
-	for (i = 0; i < CALC_SIZE - 1; i++) { 
+	for (i = 0; i < calc_size - 2; i += 2) { //-1 or -2???
 		n1 = events[i]->det;
 		n2 = events[i+1]->det;
 
@@ -829,8 +833,13 @@ int calc_histo(einfo_t **events, int en_range[][4], unsigned int **histo_en, uns
 		
 		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) && (s2 >= EN_THRESHOLD) && (s2 < HIST_SIZE) ) {
 			diff_time = T_SCALE[0]*(events[i]->t - events[i+1]->t) + T_SCALE[0]*T_SCALE[1];
+			if (diff_time < 0) {
+				printf("!!! diff_time < 0 WARNING!!!\n");
+			}
+
 			dtime = 0;
-			for (j = (int)(diff_time/c) - 1; j < HIST_SIZE - 1; j++) {
+			//for (j = (int)(diff_time/c) - 1; j < HIST_SIZE - 1; j++) {
+			for (j = 0; j < HIST_SIZE - 1; j++) {
 				if ( (diff_time > j*c) && (diff_time < (j + 1)*c) ) {
 					//!!!CHECK IT!!!
 					//if ( b_definitely_greater_a(j*c, diff_time) && b_definitely_greater_a(diff_time, (j + 1)*c) ) {
@@ -973,6 +982,16 @@ void close_files_for_histo(int **out_histo_fd)
 	free(*out_histo_fd); *out_histo_fd = NULL;
 }
 
+void print_histo_test(unsigned int *histo)
+{
+	int i = 0;
+
+	for (i = 2000; i < 3000; i++) {
+		printf("%u ", histo[i]);
+	}
+	printf(" \n");
+}
+
 int save_histo_in_file(const int *out_fd, unsigned int **histo_en, unsigned int **start)
 {
 	int i;
@@ -1001,6 +1020,10 @@ int save_histo_in_file(const int *out_fd, unsigned int **histo_en, unsigned int 
 	}
 
 	for (i = 4; i < 16; i++) {
+		#ifdef DEBUG
+		print_histo_test(start[i - 4]);
+		#endif
+
 		lseek(out_fd[i], 512, 0);
 		res = write(out_fd[i], start[i - 4], HIST_SIZE*sizeof(unsigned int));
 		if (res != HIST_SIZE*sizeof(unsigned int)) {
@@ -1086,6 +1109,59 @@ int save_histo_in_ascii(const char *foldername, unsigned int **histo_en, unsigne
 		fclose(out_file[i]);
 	}
 	free(tempstr); tempstr = NULL;
+
+	return 0;
+}
+
+int open_file_EbE(const char *filename)
+{
+	int fd = 0;
+
+	if ( (filename == NULL) || strlen(filename) == 0 ) {
+		return -1;
+	}
+
+	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+	return fd;
+}
+
+int fill_EbE(int fd, einfo_t **events)
+{
+	int i;
+	int ret = 0;
+	int *x = (int *)calloc(sizeof(int), CALC_SIZE);
+	if (x == NULL) {
+		#ifdef DEBUG
+		printf("error while calloc x in %s\n", __FUNC__);
+		#endif
+
+		return -1;
+	}
+
+	for(i = 0; i <= CALC_SIZE - 8; i++) {
+		x[i+1] = (events[i+1]->t - events[i]->t) / 256;
+		x[i+0] = (events[i+1]->t - events[i]->t) - 256*x[i+1];
+
+		//EN 1st det
+		x[i+3] = events[i]->en / 256;
+		x[i+2] = events[i]->en - 256*x[i+3];
+		//EN 2nd det
+		x[i+5] = events[i+1]->en / 256;
+		x[i+4] = events[i+1]->en - 256*x[i+5];
+
+		x[i+6] = events[i]->det;
+		x[i+7] = events[i+1]->det;
+
+		ret = write(fd, x, CALC_SIZE*sizeof(int));
+		if (ret != CALC_SIZE*sizeof(int)) {
+			free(x);
+
+			return -1;
+		}
+	}
+
+	free(x);
 
 	return 0;
 }
