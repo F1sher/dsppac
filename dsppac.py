@@ -6,12 +6,15 @@ import os
 import signal
 import subprocess
 import socket
+import sys
 import time
 from gi.repository import Gtk
 from signal import SIGUSR1
 from struct import unpack
 from struct import error as struct_error_unpack
 
+sys.path.append("./ui")
+import const
 
 PYTHON_EXEC = "python3.4"
 STUFF_FOLDER = "./"
@@ -26,8 +29,7 @@ CONSTANTS_FILE = "constants.json"
 SLEEP_S_SOCK_READ = 1
 
 
-class StartWin(Gtk.Window):
-    
+class DSPPAC(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="DspPAC", resizable=False)
         self.connect("delete-event", Gtk.main_quit)
@@ -223,7 +225,7 @@ class StartWin(Gtk.Window):
         if self.prog == HDRAINER_EXE:
             self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, HDRAINER_EXE), [ "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
         elif self.prog == HDRAINER_EXE + "(with signals)":
-            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, HDRAINER_EXE), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
+            self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, HDRAINER_EXE), [ "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1], "-o", output_histo_file ])
         elif self.prog == ONLINE_EXE:
             self.start_C_prog(self.prog, "{}build/{}".format(MAIN_PROG_FOLDER, ONLINE_EXE), [ "-t", str(self.time), "-e", str(self.en_range)[1:-1] ])
         elif self.prog == ONLINE_EXE + "(with signals)":
@@ -243,15 +245,9 @@ class StartWin(Gtk.Window):
             time.sleep(1)
             try:
                 os.execl(prog_path, prog_path, *prog_params)
-                '''
-                os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), \
-                         "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), \
-                         "-s", "-t", str(self.time), "-e", str(self.en_range)[1:-1])
-                '''
             except OSError:
                 print("OSerror exception")
                 raise
-                #os.execl("{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "{}build/{}".format(MAIN_PROG_FOLDER, self.prog), "-t", str(self.time), "-o", output_histo_file)
         else:
             #Parent
             self.child_pid = pid
@@ -277,6 +273,10 @@ class StartWin(Gtk.Window):
                     cycles, exe_time, *diff_counts, exe_m_time = unpack("=7l", out_str)
                 except struct_error_unpack:
                     #End of *DRAINER should be
+                    print("Struct unpack error | out_str = {}".format(out_str))
+                    cycles, exe_time = 0, 0
+                    diff_counts = [0, 0, 0, 0]
+                    exe_m_time = 1
                     None
                         
                 print("cycles = {}, execution_time = {} | type = {}".format(cycles, exe_time, type(cycles)))
@@ -296,6 +296,7 @@ class StartWin(Gtk.Window):
                         None
                     else:
                         cycles_per_time = (cycle_curr - cycle_prev)/(exe_time_curr - exe_time_prev)
+                        cycles_per_time *= self.coinc + 1
                         self.lbl_intens.set_text("{:d} cnts/s | {:d} s".format(int(cycles_per_time), exe_time_curr))
                         time.sleep(SLEEP_S_SOCK_READ)
                         while Gtk.events_pending():
@@ -416,7 +417,6 @@ class StartWin(Gtk.Window):
         else:
             self.statusbar.push(self.statusbar.get_context_id("ok coinc on/off"), "Coinc ON/OFF OK.")
 
-    
     def parse_cfg(self, path_cfg_file):
         with open(path_cfg_file, 'r') as cfg_file:
             #if the size of cfg.json will be larger than 2048 bytes, please change it
@@ -424,42 +424,42 @@ class StartWin(Gtk.Window):
             config_vals = json.loads(config)
             print("config_vals = {}".format(config_vals))
             
-            self.porog = config_vals["porog"]#[90, 90, 90, 90]
-            self.delay = config_vals["delay"]#100
-            self.coinc = 1 if config_vals["coinc?"] == "True" else 0#1
-            self.time = config_vals["time"]#10
+            self.porog = config_vals["porog for detectors"]#[90, 90, 90, 90]
+            self.delay = config_vals["time of coincidence"]#100
+            self.coinc = 1 if config_vals["coinc mode?"] == "True" else 0#1
+            self.acq_time = config_vals["time of exposition [s]"]#10
             self.histo_folder = config_vals["histo folder"]
-            for i in range(0, 4):
-                self.en_range[i] = config_vals["en_range " + str(i)]
-
+            self.en_range = []
+            for i in range(0, const.DET_NUM):
+                self.en_range.append( config_vals["en_range D" + str(i + 1)] )
 
     def save_cfg(self, path_cfg_file):
         with open(path_cfg_file, 'w') as cfg_file:
             config = {}
-            config["porog"] = self.porog
-            config["delay"] = self.delay
-            config["coinc?"] = "True" if self.coinc == 1 else "False"
-            config["time"] = self.time
+            config["porog for detectors"] = self.porog
+            config["time of coincidence"] = self.delay
+            config["coinc mode?"] = "True" if self.coinc == 1 else "False"
+            config["time of exposition [s]"] = self.acq_time
             config["histo folder"] = self.histo_folder
             
-            for i in range(0, 4):
+            for i in range(0, const.DET_NUM):
                 energies = map(int, self.entry_en_range[i].get_text().split(', '))
-                for j in range(0, 4):
-                    self.en_range[i][j] = next(energies)
-            for i in range(0, 4):
-                config["en_range " + str(i)] = self.en_range[i]
-            
+            for j in range(0, const.DET_NUM):
+                self.en_range[i][j] = next(energies)
+            for i in range(0, const.DET_NUM):
+                config["en_range D" + str(i + 1)] = self.en_range[i]
+                    
             def dict_to_true_cfg_str(d):
                 res = "{\n"
-                res += "\t\"porog\": " + str(d["porog"]) + ",\n"
-                res += "\t\"delay\": " + str(d["delay"]) + ",\n"
-                res += "\t\"coinc?\": " + "\"" + str(d["coinc?"]) + "\"" + ",\n"
-                res += "\t\"time\": " + str(d["time"]) + ",\n"
+                res += "\t\"porog for detectors\": " + str(d["porog for detectors"]) + ",\n"
+                res += "\t\"time of coincidence\": " + str(d["time of coincidence"]) + ",\n"
+                res += "\t\"coinc mode?\": " + "\"" + str(d["coinc mode?"]) + "\"" + ",\n"
+                res += "\t\"time of exposition [s]\": " + str(d["time of exposition [s]"]) + ",\n"
                 res += "\t\"histo folder\": " + "\"" + str(d["histo folder"]) + "\"" + ",\n"
                 for i in range(0, 3):
-                    res += "\t\"en_range " + str(i) + "\": " + str(d["en_range " + str(i)])  + ",\n"
+                    res += "\t\"en_range D" + str(i + 1) + "\": " + str(d["en_range D" + str(i + 1)])  + ",\n"
                 i = 3
-                res += "\t\"en_range " + str(i) + "\": " + str(d["en_range " + str(i)])  + "\n"
+                res += "\t\"en_range D" + str(i + 1) + "\": " + str(d["en_range D" + str(i + 1)])  + "\n"
                 res +="}"
                 return res
 
@@ -468,7 +468,7 @@ class StartWin(Gtk.Window):
 
 
 if __name__ == "__main__":
-    win = StartWin()
+    win = DSPPAC()
 
     win.show_all()
     Gtk.main()

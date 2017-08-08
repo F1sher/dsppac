@@ -241,9 +241,9 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	int out_EbE_fd = open_file_EbE("./test/event-by-event.out");
+	FILE *out_EbE_fd = open_file_EbE("/home/das/job/vukdriver-master/event-by-event.out");
 
-	if (out_EbE_fd == -1) {
+	if (out_EbE_fd == NULL) {
 		exit_controller(usb_h);
 
 		free_mem_data(&data);
@@ -274,7 +274,7 @@ int main(int argc, char **argv)
 			close(out_histo_fd[i]);
 		}
 		free(out_histo_fd); out_histo_fd = NULL;
-		close(out_EbE_fd);
+		fclose(out_EbE_fd);
 
 		return -1;
 	}
@@ -328,7 +328,7 @@ int main(int argc, char **argv)
 				close(out_histo_fd[i]);
 			}
 			free(out_histo_fd); out_histo_fd = NULL;
-			close(out_EbE_fd);
+			fclose(out_EbE_fd);
 	
 			return -1;
 		}
@@ -353,7 +353,7 @@ int main(int argc, char **argv)
 			calc_histo(events, counter_events, en_range, histo_en, start);
 			save_histo_in_file(out_histo_fd, histo_en, start);
 
-			fill_EbE(out_EbE_fd, events);
+			fill_EbE(out_EbE_fd, events, counter_events);
 
 			counter_events = 0;
 		}
@@ -430,7 +430,7 @@ int main(int argc, char **argv)
 		close(out_histo_fd[i]);
 	}
 	free(out_histo_fd); out_histo_fd = NULL;
-	close(out_EbE_fd);
+	fclose(out_EbE_fd);
 
 	return 0;
 }

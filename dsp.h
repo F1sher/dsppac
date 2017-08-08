@@ -216,8 +216,8 @@ void close_files_for_histo(int **out_histo_fd);
  */
 int save_histo_in_ascii(const char *foldername, unsigned int **histo_en, unsigned int **start);
 
-int open_file_EbE(const char *filename);
-int fill_EbE(int fd, einfo_t **events);
+FILE *open_file_EbE(const char *filename);
+int fill_EbE(FILE *fd, einfo_t **events, int calc_size);
 
 //FUNCTIONS for TRANSFER DATA EVENT trough FIFO
 /**

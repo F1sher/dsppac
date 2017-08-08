@@ -833,9 +833,10 @@ int calc_histo(einfo_t **events, int calc_size, int en_range[][4], unsigned int 
 		
 		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) && (s2 >= EN_THRESHOLD) && (s2 < HIST_SIZE) ) {
 			diff_time = T_SCALE[0]*(events[i]->t - events[i+1]->t) + T_SCALE[0]*T_SCALE[1];
-			if (diff_time < 0) {
-				printf("!!! diff_time < 0 WARNING!!!\n");
-			}
+			
+			//if (diff_time < 0) {
+			//	printf("!!! diff_time < 0 WARNING!!!\n");
+			//}
 
 			dtime = 0;
 			//for (j = (int)(diff_time/c) - 1; j < HIST_SIZE - 1; j++) {
@@ -1020,9 +1021,9 @@ int save_histo_in_file(const int *out_fd, unsigned int **histo_en, unsigned int 
 	}
 
 	for (i = 4; i < 16; i++) {
-		#ifdef DEBUG
-		print_histo_test(start[i - 4]);
-		#endif
+		//#ifdef DEBUG
+		//print_histo_test(start[i - 4]);
+		//#endif
 
 		lseek(out_fd[i], 512, 0);
 		res = write(out_fd[i], start[i - 4], HIST_SIZE*sizeof(unsigned int));
@@ -1113,55 +1114,76 @@ int save_histo_in_ascii(const char *foldername, unsigned int **histo_en, unsigne
 	return 0;
 }
 
-int open_file_EbE(const char *filename)
+FILE *open_file_EbE(const char *filename)
 {
-	int fd = 0;
+	FILE *fd = NULL;
 
 	if ( (filename == NULL) || strlen(filename) == 0 ) {
-		return -1;
+		return NULL;
 	}
 
-	fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	fd = fopen(filename, "w+");
 
 	return fd;
 }
 
-int fill_EbE(int fd, einfo_t **events)
+int fill_EbE(FILE *fd, einfo_t **events, int calc_size)
 {
-	int i;
-	int ret = 0;
-	int *x = (int *)calloc(sizeof(int), CALC_SIZE);
+	int i, j;
+	double diff_time = 0.0;
+	int dtime = 0;
+	const double c = 2.0*T_SCALE[0]*T_SCALE[1]/HIST_SIZE;
+
+	unsigned char *x = (unsigned char *)calloc(sizeof(unsigned char), 4*calc_size);
 	if (x == NULL) {
 		#ifdef DEBUG
-		printf("error while calloc x in %s\n", __FUNC__);
+		printf("error while calloc x in %s\n", __func__);
 		#endif
 
 		return -1;
 	}
 
-	for(i = 0; i <= CALC_SIZE - 8; i++) {
-		x[i+1] = (events[i+1]->t - events[i]->t) / 256;
-		x[i+0] = (events[i+1]->t - events[i]->t) - 256*x[i+1];
+	for (i = 0; i <= calc_size/2 - 1; i += 1) {
+		//dt = t[i+1] - t[i] | [dt] = true histogram chs 
+		diff_time = T_SCALE[0]*(events[2*i+1]->t - events[2*i]->t) + T_SCALE[0]*T_SCALE[1];
+		dtime = 0;
+
+		for (j = 0; j < HIST_SIZE - 1; j++) {
+			if ( (diff_time > j*c) && (diff_time < (j + 1)*c) ) {
+				dtime = j;
+
+				break;
+			}
+		}
+
+		x[8*i+1] = dtime / 256;
+		x[8*i+0] = dtime - 256*x[8*i+1];
 
 		//EN 1st det
-		x[i+3] = events[i]->en / 256;
-		x[i+2] = events[i]->en - 256*x[i+3];
+		x[8*i+3] = events[2*i]->en / 256;
+		x[8*i+2] = events[2*i]->en - 256*x[8*i+3];
 		//EN 2nd det
-		x[i+5] = events[i+1]->en / 256;
-		x[i+4] = events[i+1]->en - 256*x[i+5];
-
-		x[i+6] = events[i]->det;
-		x[i+7] = events[i+1]->det;
-
-		ret = write(fd, x, CALC_SIZE*sizeof(int));
-		if (ret != CALC_SIZE*sizeof(int)) {
-			free(x);
-
-			return -1;
-		}
+		x[8*i+5] = events[2*i+1]->en / 256;
+		x[8*i+4] = events[2*i+1]->en - 256*x[8*i+5];
+		//Det nums
+		x[8*i+6] = events[2*i]->det;
+		x[8*i+7] = events[2*i+1]->det;
 	}
+	fwrite(x, sizeof(unsigned char), 4*calc_size, fd);
+	//check fwrite return bytes
+	/*if ( ret < (int)(calc_size*sizeof(int)) ) {
+		#ifdef DEBUG
+		printf("ret = %d (should be %d)\n", ret, (int)(calc_size*sizeof(int)));
+		#endif
 
+		free(x);
+
+		return -1;
+	}
+	*/
 	free(x);
+
+	printf("calc size in %s = %d\n", __func__, calc_size);
 
 	return 0;
 }
