@@ -1,9 +1,8 @@
 #include "parse_args.h"
 
 static const char *out_foldername_default = "/home/das/job/dsp/test/histos";
-static int with_signal_flag = 0;
 
-const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, unsigned int *time, int en_range[][4])
+const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, int *with_signal_flag, unsigned int *time, int en_range[][4])
 {
 	int i, x = 0;
     int res = 0;
@@ -148,7 +147,7 @@ const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, unsi
             break;
 		case 's':
 			//set signal mode acqusition
-			with_signal_flag = 1;
+			*with_signal_flag = 1;
 
 			break;
 		default:

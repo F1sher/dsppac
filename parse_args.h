@@ -22,7 +22,7 @@ typedef struct {
     double T_SCALE[2];
 } const_t;
 
-const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, unsigned int *time, int en_range[][4]);
+const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, int *with_signal_flag, unsigned int *time, int en_range[][4]);
 
 int const_parser(const char *const_filename, const_t *const_params);
 void set_const_params(const_t const_params);

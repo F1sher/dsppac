@@ -107,8 +107,12 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	for (i = 0; i < argc; i++) {
+		printf("argv[%d] = %s\n", i, argv[i]);
+	}
+
 	out_foldername = parse_and_give_comm(argc, argv, usb_h, \
-									   &time_acq, en_range);
+										 &with_signal_flag, &time_acq, en_range);
 	if (out_foldername == NULL) {
 		exit_controller(usb_h);
 
@@ -312,6 +316,7 @@ int main(int argc, char **argv)
 
 	//Read cycle
 	while (read_cycle_flag) {
+
 		data = read_data_ep(usb_h, data);
 		if (data == NULL) {
 			fprintf(stderr, "Error in read_data_ep()\n");
@@ -335,6 +340,7 @@ int main(int argc, char **argv)
 		get_det_counts(data, intens, 0);
 
 		//if signal mode is ON or OFF?
+		//printf("with signal flag = %d\n", with_signal_flag);
 		if (with_signal_flag == 1) {
 			//SAVE to signal file in directory with histo
 			save_data_in_file(out_sgnl_fd, data);
