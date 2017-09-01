@@ -483,7 +483,9 @@
                       <object class="GtkTextView" id="info_textview">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
+                        <property name="hexpand">False</property>
                         <property name="editable">False</property>
+                        <property name="wrap_mode">char</property>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>

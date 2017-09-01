@@ -566,19 +566,31 @@ double time_cubic_signal(int *a)
 	double edge = baseline - CFT_fraction*(baseline - min_a);
     double xa[4];
     double ya[4];
-    for (i = 3; i >= 0; i--) {
-		j = min_a_i - i;
+    for (i = 0; i <= 3; i++) {
+		j = min_a_i + i - 3;
 		xa[i] = (double)j;
-		ya[i] = (double)a[j] - edge;
+		ya[i] = (double)(a[j] - edge);
     }
 
 	//printf("ya = {%.2f, %.2f, %.2f, %.2f}\n", ya[0], ya[1], ya[2], ya[3]);
 
     //we are interesting in x0 position for time stamp
-    ret = gsl_spline_init(spline, ya, xa, 4);
+    ret = gsl_spline_init(spline, xa, ya, 4);
 	if (ret == 0) {
-		x0 = gsl_spline_eval(spline, 0.0, accel);
+        double x = 0.0;
+        double y = 0.0;
+        for (i = 0; i <= 40000; i++) {
+            x = xa[0] + 0.0001*i;
+            y = gsl_spline_eval(spline, x, accel);
+            if ( (fabs(y) <= 0.1) ) {
+                x0 = x;
+                break;
+            } 
+        }
 	}
+	else {
+        printf ("error: %s\n", gsl_strerror(ret));
+    }
 
     gsl_spline_free(spline);
     gsl_interp_accel_free(accel);

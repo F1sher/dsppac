@@ -105,14 +105,14 @@ class UI():
 
         self.statusbar = self.builder.get_object("main_statusbar")
 
-    def init_Figs(self):
-        def create_title(i):
-            titles = ["D1-D2", "D2-D1", "D1-D3", "D3-D1",
-                      "D1-D4", "D4-D1", "D2-D3", "D3-D2",
-                      "D2-D4", "D4-D2", "D3-D4", "D4-D3"]
+    def create_t_title(self, i):
+        titles = ["D1-D2", "D2-D1", "D1-D3", "D3-D1",
+                  "D1-D4", "D4-D1", "D2-D3", "D3-D2",
+                  "D2-D4", "D4-D2", "D3-D4", "D4-D3"]
             
-            return titles[i]
+        return titles[i]
 
+    def init_Figs(self):
         self.en_fig = []
         self.en_axes = []
         for i in range(0, const.DET_NUM):
@@ -146,7 +146,7 @@ class UI():
         for i in range(0, 12):
             self.t_fig.append( Figure(figsize=(1, 1), dpi=80, frameon=False) )
             self.t_axes.append( self.t_fig[i].add_subplot(111) )
-            title_text = create_title(i)
+            title_text = self.create_t_title(i)
 
             if (i == 0) or (i == 1):
                 self.t_fig[i].suptitle(title_text, x=0.45, y=0.95)
@@ -239,13 +239,19 @@ class UI():
             self.t_axes_line[i].set_ydata( histo_np_arr[const.DET_NUM + i] )
             self.t_fig[i].canvas.draw()
 
+            text = "{}    {}".format(self.create_t_title(i), sum(histo_np_arr[const.DET_NUM+i]))
+            if (i == 0) or (i == 1):
+                self.t_fig[i].suptitle(text, x=0.45, y=0.95)
+            else:
+                self.t_fig[i].suptitle(text, x=0.3, y=0.95)
+
         print("plotting time = {}".format(time() - t))
 
     def update_counts(self, det_counts):
-        all_zero = 0
+        all_zero_counts = 0
         for i in range(0, const.DET_NUM):
             if det_counts[i] == 0:
-                all_zero += 1
+                all_zero_counts += 1
 
             text = "D{:d}    {:.2f}K".format(i + 1, det_counts[i]/1e3)
             if i == 0:
@@ -253,7 +259,7 @@ class UI():
             else:
                 self.en_fig[i].suptitle(text, x=0.3, y=0.95)
 
-        if all_zero == const.DET_NUM:
+        if all_zero_counts == const.DET_NUM:
             for i in range(0, const.DET_NUM):
                 self.en_fig[i].canvas.draw()
 
@@ -448,8 +454,9 @@ class UI():
         
         self.update_Figs(histo)
     
+        #Update EN and T spk counts (top on the fig)
         self.update_counts(self.hdrainer.det_counts)
-        
+
         info = {
             "time": self.hdrainer.exec_time,
             "intens": self.hdrainer.cycles_per_time,
@@ -780,7 +787,6 @@ class Hdrainer():
                     break
 
                 #should be with NONBLOCK flag and try except
-                print("wait receiving ...")
                 try:
                     #out_str = zmq_subscriber.recv(flags=zmq.NOBLOCK)
                     out_str = zmq_subscriber.recv()
@@ -847,9 +853,6 @@ class Hdrainer():
                                 if counts_prev[i] == -1:
                                     counts_prev[i] = counts[i]
                                 else:
-                                    print("counts = {}".format(counts))
-                                    print("counts_prev = {} | counts_curr = {}".format(counts_prev, counts_curr))
-                                
                                     if counts_curr[i] == -1:
                                         counts_curr[i] = counts[i]
                                     else:
@@ -859,8 +862,6 @@ class Hdrainer():
                                         #diff_per_s = round( (counts_curr[i] - counts_prev[i])/(exe_m_time/1000) )
                                         diff_per_s = round( (counts_curr[i] - counts_prev[i])/(exe_time_curr - exe_time_prev) )
                                         self.det_counts[i] = diff_per_s
-                                    
-                                    print("det_couns[{}] = {}".format(i, self.det_counts[i]))
                                 
                         print("exe_m_time = {:d}".format(exe_m_time))
 

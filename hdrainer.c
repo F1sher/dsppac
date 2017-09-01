@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 	}
 
 	out_foldername = parse_and_give_comm(argc, argv, usb_h, \
-										 &with_signal_flag, &time_acq, en_range);
+									   &time_acq, en_range);
 	if (out_foldername == NULL) {
 		exit_controller(usb_h);
 
@@ -312,7 +312,6 @@ int main(int argc, char **argv)
 
 	//Read cycle
 	while (read_cycle_flag) {
-
 		data = read_data_ep(usb_h, data);
 		if (data == NULL) {
 			fprintf(stderr, "Error in read_data_ep()\n");
