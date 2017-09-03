@@ -2,10 +2,10 @@
 	"porog for detectors": [120, 120, 120, 120],
 	"time of coincidence [ch]": 80,
 	"coinc mode?": "True",
-	"time of exposition [s]": 3600,
-	"histo folder": "/home/das/job/dsp/test/histos_",
-	"en_range D1": [100, 100, 100, 100],
-	"en_range D2": [2250, 2600, 2603, 3038],
-	"en_range D3": [2100, 2400, 2420, 2800],
-	"en_range D4": [2500, 2700, 2800, 3150]
+	"time of exposition [s]": 72000,
+	"histo folder": "/home/das/job/dsp/test/spectra/170903_152Eu_liquid_line",
+	"en_range D1": [243, 390, 3380, 3670],
+	"en_range D2": [228, 350, 3352, 3630],
+	"en_range D3": [265, 400, 3712, 3933],
+	"en_range D4": [224, 320, 2960, 3215]
 }

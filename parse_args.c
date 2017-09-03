@@ -257,6 +257,14 @@ int const_parser(const char *const_filename, const_t *const_params)
             SET_PARAM_FLOAT(Tau_trap);
             i++;
         }
+		else if (json_equal(const_data, &t[i], "AVERAGE_trap") == 0) {
+            SET_PARAM_INT(AVERAGE_trap);
+            i++;
+        }
+		else if (json_equal(const_data, &t[i], "I_MIN_S_SHIFT_trap") == 0) {
+            SET_PARAM_INT(I_MIN_S_SHIFT_trap);
+            i++;
+        }
         else if (json_equal(const_data, &t[i], "INTEGRAL_steps_back") == 0) {
             SET_PARAM_INT(INTEGRAL_steps_back);
             i++;
@@ -302,6 +310,9 @@ void set_const_params(const_t const_params)
 	K_trap = const_params.K_trap;
 	L_trap = const_params.L_trap;
 	Tau_trap = const_params.Tau_trap;
+
+	AVERAGE_trap = const_params.AVERAGE_trap;
+	I_MIN_S_SHIFT_trap = const_params.I_MIN_S_SHIFT_trap;
 
 	INTEGRAL_steps_back = const_params.INTEGRAL_steps_back;
 	INTEGRAL_steps_forw = const_params.INTEGRAL_steps_forw;

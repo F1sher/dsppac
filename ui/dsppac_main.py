@@ -737,6 +737,7 @@ class Hdrainer():
         self.online = False
         self.ret = 0
 
+        print("prog_name in Hdrainer = {}".format(prog_name))
         if prog_name == const.HDRAINER_EXE:
             self.prog_path = "{}build/{}".format(const.MAIN_PROG_FOLDER, const.HDRAINER_EXE)
             self.prog_params = [ "-t", str(self.time), "-e", str(self.en_range)[1:-1], "-o", self.out_foldername]

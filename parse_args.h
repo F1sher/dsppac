@@ -15,6 +15,9 @@ typedef struct {
     unsigned int L_trap;
     double Tau_trap;
 
+	int AVERAGE_trap;
+	int I_MIN_S_SHIFT_trap;
+
     int INTEGRAL_steps_back;
 	int INTEGRAL_steps_forw;
 
