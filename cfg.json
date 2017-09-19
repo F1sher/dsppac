@@ -3,9 +3,9 @@
 	"time of coincidence [ch]": 80,
 	"coinc mode?": "True",
 	"time of exposition [s]": 72000,
-	"histo folder": "/home/das/job/dsp/test/spectra/170903_152Eu_liquid_line",
-	"en_range D1": [243, 390, 3380, 3670],
-	"en_range D2": [228, 350, 3352, 3630],
-	"en_range D3": [265, 400, 3712, 3933],
-	"en_range D4": [224, 320, 2960, 3215]
+	"histo folder": "/home/das/job/dsp/test/spectra/170918_169Yb_Shpinel",
+	"en_range D1": [230, 310, 3470, 3640],
+	"en_range D2": [220, 310, 3400, 3600],
+	"en_range D3": [230, 320, 3700, 3970],
+	"en_range D4": [200, 280, 3090, 3240]
 }

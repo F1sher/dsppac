@@ -157,11 +157,11 @@ class UI():
             if i == 0:
                 self.t_fig[i].subplots_adjust(left=0.2, bottom=0.05, right=0.99, top=0.99)
             elif i == 1:
-                self.t_fig[i].subplots_adjust(left=0.2, bottom=0.2, right=0.99, top=0.99)
+                self.t_fig[i].subplots_adjust(left=0.2, bottom=0.05, right=0.99, top=0.99)
             elif i in [2, 4, 6, 8, 10]:
                 self.t_fig[i].subplots_adjust(left=0.05, bottom=0.05, right=0.99, top=0.99)
             else:
-                self.t_fig[i].subplots_adjust(left=0.05, bottom=0.2, right=0.99, top=0.99)
+                self.t_fig[i].subplots_adjust(left=0.05, bottom=0.05, right=0.99, top=0.99)
             ###
             ###xlim ylim
             self.t_axes[i].set_xlim(0, const.HIST_SIZE)
@@ -239,11 +239,11 @@ class UI():
             self.t_axes_line[i].set_ydata( histo_np_arr[const.DET_NUM + i] )
             self.t_fig[i].canvas.draw()
 
-            text = "{}    {}".format(self.create_t_title(i), sum(histo_np_arr[const.DET_NUM+i]))
+            text = "{}    {}".format(self.create_t_title(i), np.sum(histo_np_arr[const.DET_NUM+i][1:]))
             if (i == 0) or (i == 1):
-                self.t_fig[i].suptitle(text, x=0.45, y=0.95)
+                self.t_fig[i].suptitle(text, x=0.55, y=0.95)
             else:
-                self.t_fig[i].suptitle(text, x=0.3, y=0.95)
+                self.t_fig[i].suptitle(text, x=0.4, y=0.95)
 
         print("plotting time = {}".format(time() - t))
 

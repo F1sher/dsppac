@@ -107,9 +107,11 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+#ifdef DEBUG
 	for (i = 0; i < argc; i++) {
 		printf("argv[%d] = %s\n", i, argv[i]);
 	}
+#endif
 
 	out_foldername = parse_and_give_comm(argc, argv, usb_h, \
 										 &with_signal_flag, &time_acq, en_range);
