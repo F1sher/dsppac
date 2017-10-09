@@ -318,7 +318,6 @@ int main(int argc, char **argv)
 
 	//Read cycle
 	while (read_cycle_flag) {
-
 		data = read_data_ep(usb_h, data);
 		if (data == NULL) {
 			fprintf(stderr, "Error in read_data_ep()\n");
@@ -377,10 +376,6 @@ int main(int argc, char **argv)
 
 			for (i = 0; i < DET_NUM; i++) {
 				buf[2 + i] = (long)(intens[i].counts);
-
-				#ifdef DEBUG
-				printf("buf[%d] = %ld\n", 2+i, buf[2+i]);
-				#endif
 			}
 
 			int diff_sec = seconds - timeval_curr_time.tv_sec;
@@ -400,11 +395,14 @@ int main(int argc, char **argv)
 				if (res != 0) {
 					printf("calc_en_t() return %d\n", res);
 				}
+				if (fabs(events[counter_events + i]->t + 1.0) < 0.1e-06) {
+					printf("-1 time line | %d\n", counter_events + i);
+				}
 				#endif
 			}
 		}
 		else {
-			printf("Overflow in counter_events\n");
+			fprintf(stderr, "Overflow in counter_events\n");
 		}
 
 		cycles++;

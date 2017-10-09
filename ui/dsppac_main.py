@@ -340,6 +340,7 @@ class UI():
             self.fpga = FPGA()
 
         print( "On start | print acq_time = {}".format(self.fpga.acq_time) )
+        self.fpga.save_consts_cfg(self.fpga.histo_folder)
 
         ###should be moved to separate func
         info = {
@@ -450,6 +451,9 @@ class UI():
 
 
     def read_plot_online_histo(self, hdir):
+        #now readbin_histo each 1 sec!!!
+        #update_counts should be each 1 sec only
+        #histo read should be 1 time ~60 sec
         histo = self.spectra.readbin_histo_files(hdir)
         
         self.update_Figs(histo)
@@ -679,6 +683,24 @@ class FPGA():
 
             cfg_file.write(dict_to_true_cfg_str(config))
 
+    def save_consts_cfg(self, path_to_save):
+        #read const file
+        with open(const.MAIN_PROG_FOLDER + const.CONSTANTS_FILE, 'r') as const_file:
+            constants = const_file.read()
+
+        #read cfg file
+        with open(const.MAIN_PROG_FOLDER + const.CFG_FILE, 'r') as cfg_file:
+            config = cfg_file.read()
+
+        #save const file in histo folder
+        with open(path_to_save + '/' + const.CONSTANTS_FILE, 'w+') as histo_folder_const_file:
+            histo_folder_const_file.write(constants)
+
+        #save cfg file in histo folder
+        with open(path_to_save + '/' + const.CFG_FILE, 'w+') as histo_folder_cfg_file:
+            histo_folder_cfg_file.write(config)
+        #ret
+
     def fill_entries(self):
         if self.with_signals_flag:
             self.switch_hdrainer.set_active(1)
@@ -749,8 +771,6 @@ class Hdrainer():
         self.online = True
         self.ret = self.start_C_prog()
         self.online = False
-
-        print("Start end")
 
         return True
         

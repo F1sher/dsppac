@@ -540,6 +540,9 @@ double time_line_signal(int *a)
 
 double time_cubic_signal(int *a)
 {
+	const int num_x_pts_step = 40000;
+	const int eps_x0 = 0.001;
+
     int i = 0;
     int j = 0;
 	int ret = 0;
@@ -579,10 +582,10 @@ double time_cubic_signal(int *a)
 	if (ret == 0) {
         double x = 0.0;
         double y = 0.0;
-        for (i = 0; i <= 40000; i++) {
+        for (i = 0; i < num_x_pts_step; i++) {
             x = xa[0] + 0.0001*i;
             y = gsl_spline_eval(spline, x, accel);
-            if ( (fabs(y) <= 0.1) ) {
+            if ( (fabs(y) <= eps_x0) ) {
                 x0 = x;
                 break;
             } 
@@ -851,17 +854,14 @@ int calc_histo(einfo_t **events, int calc_size, int en_range[][4], unsigned int 
 			//}
 
 			dtime = 0;
-			//for (j = (int)(diff_time/c) - 1; j < HIST_SIZE - 1; j++) {
 			for (j = 0; j < HIST_SIZE - 1; j++) {
-				if ( (diff_time > j*c) && (diff_time < (j + 1)*c) ) {
-					//!!!CHECK IT!!!
-					//if ( b_definitely_greater_a(j*c, diff_time) && b_definitely_greater_a(diff_time, (j + 1)*c) ) {
+				if ( (diff_time >= j*c) && (diff_time < (j + 1)*c) ) {
 					dtime = j;
 					break;
 				}
 			}
 
-			//printf("n1 = %d, n2 = %d | s1 = %d, s2 = %d | dtime = %d\n", n1, n2, s1, s2, dtime);
+			//printf("n1 = %d, n2 = %d | s1 = %d, s2 = %d | diff_time = %.2f dtime = %d\n", n1, n2, s1, s2, diff_time, dtime);
 			
 			if ( (n1 == 1) && (n2 == 2) ) {
 				if ( (s1 >= en_range[0][0]) && (s1 <= en_range[0][1]) && (s2 >= en_range[1][2]) && (s2 <= en_range[1][3]) ) {

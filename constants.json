@@ -8,5 +8,5 @@
 	"INTEGRAL_steps_back": 10,
 	"INTEGRAL_steps_forw": 20,
 	"CFT_fraction": 0.6,
-	"T_SCALE": [100.0, 100.0]
+	"T_SCALE": [100.0, 20.0]
 }
