@@ -3,9 +3,9 @@
 	"time of coincidence [ch]": 80,
 	"coinc mode?": "True",
 	"time of exposition [s]": 36000,
-	"histo folder": "/home/das/job/dsp/test/spectra/171005_44Ti_TiO2_68_78keV",
-	"en_range D1": [170, 225, 227, 286],
-	"en_range D2": [164, 215, 218, 270],
-	"en_range D3": [182, 242, 245, 300],
-	"en_range D4": [156, 196, 200, 250]
+	"histo folder": "/home/das/job/dsp/test/spectra/171018_160Tb_liquid_No15",
+	"en_range D1": [230, 310, 3470, 3640],
+	"en_range D2": [220, 310, 3400, 3600],
+	"en_range D3": [230, 320, 3700, 3970],
+	"en_range D4": [200, 280, 3090, 3240]
 }

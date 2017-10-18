@@ -231,7 +231,7 @@ class UI():
         for i in range(0, const.DET_NUM):
             #self.en_axes[i].set_xlim(left = 80, right = 100)
             self.en_axes[i].set_ylim(top = max_histo_en)
-            self.en_axes_line[i].set_ydata( histo_np_arr[i] ) #change to histo_np_arr
+            self.en_axes_line[i].set_ydata( histo_np_arr[i] )
             self.en_fig[i].canvas.draw()
 
         for i in range(0, 12):
@@ -259,9 +259,8 @@ class UI():
             else:
                 self.en_fig[i].suptitle(text, x=0.3, y=0.95)
 
-        if all_zero_counts == const.DET_NUM:
-            for i in range(0, const.DET_NUM):
-                self.en_fig[i].canvas.draw()
+        for i in range(0, const.DET_NUM):
+            self.en_fig[i].canvas.draw()
 
     def on_open(self, *args):
         print("open histo")
@@ -368,8 +367,11 @@ class UI():
 
         self.online_flag = 1
 
-        GLib.timeout_add_seconds(const.SLEEP_S_SOCK_READ, self.read_plot_online_histo, self.fpga.histo_folder)
-        
+        GLib.timeout_add_seconds(const.SLEEP_S_FIG_UPDATE, 
+                                 self.read_plot_online_histo, self.fpga.histo_folder)
+        GLib.timeout_add_seconds(const.SLEEP_S_COUNTS_UPDATE,
+                                 self.update_counts_online_histo)
+
         self.glib_loop = GLib.MainLoop()
         self.glib_loop.run()
         #self.glib_loop.quit()
@@ -453,22 +455,11 @@ class UI():
     def read_plot_online_histo(self, hdir):
         #now readbin_histo each 1 sec!!!
         #update_counts should be each 1 sec only
-        #histo read should be 1 time ~60 sec
+
+        #histo read should be 1 time ~100 sec
         histo = self.spectra.readbin_histo_files(hdir)
-        
         self.update_Figs(histo)
     
-        #Update EN and T spk counts (top on the fig)
-        self.update_counts(self.hdrainer.det_counts)
-
-        info = {
-            "time": self.hdrainer.exec_time,
-            "intens": self.hdrainer.cycles_per_time,
-        }
-        print( "info.time = {}".format(info["time"]) )
-        self.information.update(info)
-
-        print("self.hdrainer.online = {}".format(self.hdrainer.online))
         if self.hdrainer.online:
             res = True
         else:
@@ -476,7 +467,26 @@ class UI():
             res = False
 
         return res
-        
+
+    def update_counts_online_histo(self):
+        #Update EN and T spk counts (top on the fig)
+        self.update_counts(self.hdrainer.det_counts)
+
+        info = {
+            "time": self.hdrainer.exec_time,
+            "intens": self.hdrainer.cycles_per_time,
+        }
+        self.information.update(info)
+
+        if self.hdrainer.online:
+            res = True
+        else:
+            self.glib_loop.quit()
+            res = False
+
+        return res
+    
+
     def is_glib_alive(self, x):
         print("main loop is alive? {}".format( self.glib_loop.is_running() ))
 

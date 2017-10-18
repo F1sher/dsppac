@@ -84,9 +84,7 @@ void catch_timer(int signum, siginfo_t *info, void *ptr)
 }
 
 void catch_sigusr1(int sig_num)
-{
-	fprintf(stdout, "Catch sigusr1 signal");
-	
+{	
 	read_cycle_flag = 0;
 }
 
@@ -341,7 +339,6 @@ int main(int argc, char **argv)
 		get_det_counts(data, intens, 0);
 
 		//if signal mode is ON or OFF?
-		//printf("with signal flag = %d\n", with_signal_flag);
 		if (with_signal_flag == 1) {
 			//SAVE to signal file in directory with histo
 			save_data_in_file(out_sgnl_fd, data);
@@ -367,8 +364,10 @@ int main(int argc, char **argv)
 		if (zmq_read_flag) {
 			zmq_read_flag = 0;
 			//write to socket and check result
-			//cycles == number of read from USB controller. In coinc on mode each read cointains 2 events. Coinc off mode contains 1 event per read.
-			//need to create func prepare_buf_to_sock(long int buf[], start_time, inens_t intens, long int *seconds, long int *u_seconds)
+			//cycles == number of read from USB controller. In coinc on mode each read cointains 2 events. 
+			//Coinc off mode contains 1 event per read.
+			//need to create func prepare_buf_to_sock(long int buf[], start_time, inens_t intens, 
+			//long int *seconds, long int *u_seconds)
 			gettimeofday(&timeval_curr_time, NULL);
 
 			buf[0] = cycles; 
@@ -390,7 +389,7 @@ int main(int argc, char **argv)
 
 		if (counter_events + 4 < CALC_SIZE) {
 			for (i = 0; i < 4; i++) { 
-				res = calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_line_signal);
+				res = calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_cubic_signal);
 				#ifdef DEBUG
 				if (res != 0) {
 					printf("calc_en_t() return %d\n", res);

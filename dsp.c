@@ -535,23 +535,75 @@ double time_line_signal(int *a)
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_roots.h>
 //flag to compile
 // -I/usr/local/include
 
+struct cubic_params
+{
+    gsl_interp_accel *accel;
+    gsl_spline *spline;
+};
+
+double f_cubic (double x, void *params)
+{
+  struct cubic_params *p 
+    = (struct cubic_params *) params;
+
+  gsl_interp_accel *accel = p->accel;
+  gsl_spline *spline = p->spline;
+
+  return gsl_spline_eval(spline, x, accel);
+}
+
+double find_cubic_root(gsl_interp_accel *accel, gsl_spline *spline, double x0)
+{
+  int status;
+  int iter = 0, max_iter = 2000;
+  const gsl_root_fsolver_type *T;
+  gsl_root_fsolver *s;
+  double r = -1.0;
+  double x_lo = x0 - 0.1;
+  double x_hi = x0 + 0.1;
+  gsl_function F;
+  struct cubic_params params = {accel, spline};
+
+  F.function = &f_cubic;
+  F.params = &params;
+
+  T = gsl_root_fsolver_brent;
+  s = gsl_root_fsolver_alloc(T);
+  gsl_root_fsolver_set(s, &F, x_lo, x_hi);
+
+  do
+    {
+      iter++;
+      status = gsl_root_fsolver_iterate(s);
+      r = gsl_root_fsolver_root(s);
+      x_lo = gsl_root_fsolver_x_lower(s);
+      x_hi = gsl_root_fsolver_x_upper(s);
+      status = gsl_root_test_interval(x_lo, x_hi,
+                                       0, 0.001);
+    }
+  while (status == GSL_CONTINUE && iter < max_iter);
+
+  gsl_root_fsolver_free(s);
+  
+  return r;
+}
+
 double time_cubic_signal(int *a)
 {
-	const int num_x_pts_step = 40000;
-	const int eps_x0 = 0.001;
-
     int i = 0;
     int j = 0;
-	int ret = 0;
+    int ret = 0;
 
-    int min_a = -1;
+    int min_a;
     int min_a_i = 0;
     min_bubble(a, SIZEOF_SIGNAL/2, &min_a, &min_a_i);
 
-    double x0 = -1.0;
+    double x0 = time_line_signal(a);
 
     double baseline = 0.0;
     for (i = 0; i < 10; i++) {
@@ -566,7 +618,7 @@ double time_cubic_signal(int *a)
     gsl_interp_accel *accel = gsl_interp_accel_alloc();
     gsl_spline *spline = gsl_spline_alloc(gsl_interp_cspline, 4);
 
-	double edge = baseline - CFT_fraction*(baseline - min_a);
+	double edge = baseline - 0.6*(baseline - min_a);
     double xa[4];
     double ya[4];
     for (i = 0; i <= 3; i++) {
@@ -574,33 +626,22 @@ double time_cubic_signal(int *a)
 		xa[i] = (double)j;
 		ya[i] = (double)(a[j] - edge);
     }
-
-	//printf("ya = {%.2f, %.2f, %.2f, %.2f}\n", ya[0], ya[1], ya[2], ya[3]);
-
     //we are interesting in x0 position for time stamp
     ret = gsl_spline_init(spline, xa, ya, 4);
-	if (ret == 0) {
-        double x = 0.0;
-        double y = 0.0;
-        for (i = 0; i < num_x_pts_step; i++) {
-            x = xa[0] + 0.0001*i;
-            y = gsl_spline_eval(spline, x, accel);
-            if ( (fabs(y) <= eps_x0) ) {
-                x0 = x;
-                break;
-            } 
-        }
-	}
-	else {
-        printf ("error: %s\n", gsl_strerror(ret));
-    }
+    //CHECK ret VALUE
+
+    //printf("ret in cftrace_t = %.2f\n", x0);
+
+    x0 = find_cubic_root(accel, spline, x0);
+
+	//printf("ret in cubic_time = %d | x0 = %.2f\n", ret, x0);
 
     gsl_spline_free(spline);
     gsl_interp_accel_free(accel);
 
     return x0;
 }
-
+ 
 int calc_en_t(int *data, einfo_t *event, double (*area_f)(int *a), double (*time_f)(int *a))
 {
 	if ( (data == NULL) || (event == NULL) || (area_f == NULL) || (time_f == NULL) ) {
@@ -849,10 +890,6 @@ int calc_histo(einfo_t **events, int calc_size, int en_range[][4], unsigned int 
 		if ( (s1 >= EN_THRESHOLD) && (s1 < HIST_SIZE) && (s2 >= EN_THRESHOLD) && (s2 < HIST_SIZE) ) {
 			diff_time = T_SCALE[0]*(events[i]->t - events[i+1]->t) + T_SCALE[0]*T_SCALE[1];
 			
-			//if (diff_time < 0) {
-			//	printf("!!! diff_time < 0 WARNING!!!\n");
-			//}
-
 			dtime = 0;
 			for (j = 0; j < HIST_SIZE - 1; j++) {
 				if ( (diff_time >= j*c) && (diff_time < (j + 1)*c) ) {
