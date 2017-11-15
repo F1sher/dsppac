@@ -356,7 +356,9 @@ int main(int argc, char **argv)
 			calc_histo(events, counter_events, en_range, histo_en, start);
 			save_histo_in_file(out_histo_fd, histo_en, start);
 
-			fill_EbE(out_EbE_fd, events, counter_events);
+			//write Event-by-event data in file
+			//filesize limit = 2 GB
+			//fill_EbE(out_EbE_fd, events, counter_events);
 
 			counter_events = 0;
 		}

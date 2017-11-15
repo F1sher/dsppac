@@ -43,7 +43,8 @@ from logger import Logger
 class UI():
     def __init__(self):
         self.builder = Gtk.Builder()
-        self.builder.add_from_file("main_ui.glade")
+        self.builder.add_from_file(const.MAIN_PROG_FOLDER + 
+                                   const.UI_FOLDER + "main_ui.glade")
         handlers = {
             "on_open": self.on_open,
             "on_quit": self.on_quit,
@@ -540,7 +541,8 @@ class Spectra():
 class FPGA():
     def __init__(self):
         self.builder = Gtk.Builder()
-        self.builder.add_from_file("fpga_ui.glade")
+        self.builder.add_from_file(const.MAIN_PROG_FOLDER + 
+                                   const.UI_FOLDER + "fpga_ui.glade")
 
         handlers = {
             "on_btn_set_porog_clicked": self.on_btn_set_porog_clicked,
