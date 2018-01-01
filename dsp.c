@@ -611,7 +611,7 @@ double time_cubic_signal(int *a)
     }
     baseline = baseline/10.0;
 
-	//halder should be off only once in program
+	//halder should be off only once in a program
 	gsl_set_error_handler_off();
 	//
 

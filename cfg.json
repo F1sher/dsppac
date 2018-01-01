@@ -2,10 +2,10 @@
 	"porog for detectors": [120, 120, 120, 120],
 	"time of coincidence [ch]": 80,
 	"coinc mode?": "True",
-	"time of exposition [s]": 720000,
-	"histo folder": "/home/das/job/dsp/test/spectra/171026_169Yb_Spinel_10d",
-	"en_range D1": [154, 200, 630, 770],
-	"en_range D2": [144, 194, 611, 741],
-	"en_range D3": [165, 232, 728, 860],
-	"en_range D4": [130, 170, 550, 655]
+	"time of exposition [s]": 600000,
+	"histo folder": "/home/das/job/dsp/test/spectra/171223",
+	"en_range D1": [380, 460, 1400, 1600],
+	"en_range D2": [360, 450, 1400, 1570],
+	"en_range D3": [400, 520, 1600, 1800],
+	"en_range D4": [320, 415, 1240, 1390]
 }

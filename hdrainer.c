@@ -25,6 +25,20 @@ const int zmq_sock_num = 5556;
 const char *socket_communication_path = "./hidden";
 
 
+void print_buf(const long int buf[])
+{
+	int i;
+
+	printf("cycles = %ld\n", buf[0]);
+	printf("execution time = %ld (ms)\n", buf[1]);
+
+	for (i = 0; i < DET_NUM; i++) {
+		printf("intens counts D#%d = %ld\t", i, buf[2 + i]);
+	}
+
+	printf("buf[6] = %ld\n", buf[6]);
+}
+
 void *create_zmq_socket(int port_num)
 {
 	void *context = zmq_ctx_new();
@@ -387,6 +401,11 @@ int main(int argc, char **argv)
 			u_seconds = timeval_curr_time.tv_usec;
 
 			zmq_send(zmq_publisher, buf, sizeof(buf), 0);
+
+#ifdef DEBUG
+			print_buf(buf);
+#endif
+
 		}
 
 		if (counter_events + 4 < CALC_SIZE) {
