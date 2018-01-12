@@ -25,18 +25,19 @@ const int zmq_sock_num = 5556;
 const char *socket_communication_path = "./hidden";
 
 
-void print_buf(const long int buf[])
+void print_buf(FILE *out, const unsigned long int buf[])
 {
 	int i;
 
-	printf("cycles = %ld\n", buf[0]);
-	printf("execution time = %ld (ms)\n", buf[1]);
+	fprintf(out, "cycles = %ld\n", buf[0]);
+	fprintf(out, "execution time = %ld ms (%.2f h)\n", 
+		   buf[1], (double)buf[1] / (1000.0 * 3600.0));
 
 	for (i = 0; i < DET_NUM; i++) {
-		printf("intens counts D#%d = %ld\t", i, buf[2 + i]);
+		fprintf(out, "intens counts D#%d = %ld\t", i, buf[2 + i]);
 	}
 
-	printf("buf[6] = %ld\n", buf[6]);
+	fprintf(out, "buf[6] = %ld\n", buf[6]);
 }
 
 void *create_zmq_socket(int port_num)
@@ -111,17 +112,20 @@ int main(int argc, char **argv)
 	const char *out_foldername = NULL;
 	cyusb_handle *usb_h = NULL;
 	const_t const_params = {0};
-	
+
+	sclog4c_level = SL4C_ALL;
+
 	res = init_controller(&usb_h);
 	if (res != 0) {
 		fprintf(stderr, "Error in init_controller()\n");
+		logmf(SL4C_ERROR, "Error in init_controller()\n");
 
 		return -1;
 	}
 
 #ifdef DEBUG
 	for (i = 0; i < argc; i++) {
-		printf("argv[%d] = %s\n", i, argv[i]);
+		logm(SL4C_FINE, "argv[%d] = %s\n", i, argv[i]);
 	}
 #endif
 
@@ -131,6 +135,7 @@ int main(int argc, char **argv)
 		exit_controller(usb_h);
 
 		fprintf(stderr, "Error in parse_and_give_comm()\n");
+		logmf(SL4C_ERROR, "Error in parse_and_give_comm()\n");
 
 		return -1;
 	}
@@ -147,8 +152,8 @@ int main(int argc, char **argv)
 	set_const_params(const_params);
 	
 #ifdef DEBUG
-	printf("L = %d, K = %d | i_min_s = %d AVERAGE_trap = %d\n", L_trap, K_trap, I_MIN_S_SHIFT_trap, AVERAGE_trap);
-	printf("T_SCALE[] = {%.2f, %.2f}\n", T_SCALE[0], T_SCALE[1]);
+	logmf(SL4C_FINE, "L = %d, K = %d | i_min_s = %d AVERAGE_trap = %d\n", L_trap, K_trap, I_MIN_S_SHIFT_trap, AVERAGE_trap);
+	logmf(SL4C_FINE, "T_SCALE[] = {%.2f, %.2f}\n", T_SCALE[0], T_SCALE[1]);
 
 	printf("\n");
 	int j;
@@ -178,18 +183,14 @@ int main(int argc, char **argv)
 	}
 
 	intens_t intens[4];
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < DET_NUM; i++) {
 		intens[i] = (intens_t) {.get_flag=-1, .counts=-1, .d_counts=0};
 	}
 
-	int out_fd = open(HDrainer_res_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if (out_fd == -1) {
+	int *out_histo_fd = open_files_for_histo(out_foldername);
+	if (out_histo_fd == NULL) {
 		exit_controller(usb_h);
-
-		free_mem_data(&data);
-
-		perror("Error in open file for drainer");
-
+		
 		return -1;
 	}
 	
@@ -201,14 +202,18 @@ int main(int argc, char **argv)
 	else {
 		snprintf(out_sgnl_filename, 1024, "%s/%s", out_foldername, "hdrainer_res.sgnl");
 	}
-	
+
 	int out_sgnl_fd = open(out_sgnl_filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (out_sgnl_fd == -1) {
 		exit_controller(usb_h);
 
 		free_mem_data(&data);
 
-		close(out_fd);
+		close(out_sgnl_fd);
+		for (i = 0; i < 16; i++) {
+			close(out_histo_fd[i]);
+		}
+		free(out_histo_fd); out_histo_fd = NULL;
 
 		perror("Error in open file for signal drainer");
 
@@ -227,6 +232,12 @@ int main(int argc, char **argv)
 
 		free_mem_data(&data);
 
+		close(out_sgnl_fd);
+		for (i = 0; i < 16; i++) {
+			close(out_histo_fd[i]);
+		}
+		free(out_histo_fd); out_histo_fd = NULL;
+
 		fprintf(stderr, "Error in alloc_mem_events()\n");
 
 		return -1;
@@ -235,26 +246,19 @@ int main(int argc, char **argv)
 	unsigned int **histo_en = NULL;
 	unsigned int **start = NULL;
 	res = alloc_mem_histo(&histo_en, &start);
-	if (res != 0) {
+	if (res != 0) {		
+		exit_controller(usb_h);
+
 		free_mem_data(&data);
 		free_mem_events(&events);
-		
-		exit_controller(usb_h);
+
+		close(out_sgnl_fd);
+		for (i = 0; i < 16; i++) {
+			close(out_histo_fd[i]);
+		}
+		free(out_histo_fd); out_histo_fd = NULL;
 
 		fprintf(stderr, "Error in alloc_mem_histo()\n");
-
-		return -1;
-	}
-
-	int *out_histo_fd = open_files_for_histo(out_foldername);
-	if (out_histo_fd == NULL) {
-		exit_controller(usb_h);
-
-		free_mem_data(&data);
-		free_mem_events(&events);
-		free_mem_histo(&histo_en, &start);
-		
-		close(out_fd);
 
 		return -1;
 	}
@@ -268,7 +272,7 @@ int main(int argc, char **argv)
 		free_mem_events(&events);
 		free_mem_histo(&histo_en, &start);
 		
-		close(out_fd);
+		close(out_sgnl_fd);
 		for (i = 0; i < 16; i++) {
 			close(out_histo_fd[i]);
 		}
@@ -277,7 +281,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	long int buf[7];
+	unsigned long int buf[7];
 
 	void *zmq_publisher = create_zmq_socket(zmq_sock_num);
 	if (zmq_publisher == NULL) {
@@ -287,7 +291,7 @@ int main(int argc, char **argv)
 		free_mem_events(&events);
 		free_mem_histo(&histo_en, &start);
 		
-		close(out_fd);
+		close(out_sgnl_fd);
 		for (i = 0; i < 16; i++) {
 			close(out_histo_fd[i]);
 		}
@@ -296,6 +300,10 @@ int main(int argc, char **argv)
 
 		return -1;
 	}
+
+#ifdef DEBUG
+	FILE *out_buf_log = fopen("/home/das/output_hdrainer.txt", "w+");
+#endif
 
 	//set timer alarm and its handler
 	struct sigaction act;
@@ -340,7 +348,7 @@ int main(int argc, char **argv)
 			free_mem_events(&events);
 			free_mem_histo(&histo_en, &start);
 			
-			close(out_fd);
+			close(out_sgnl_fd);
 			for (i = 0; i < 16; i++) {
 				close(out_histo_fd[i]);
 			}
@@ -387,15 +395,15 @@ int main(int argc, char **argv)
 			gettimeofday(&timeval_curr_time, NULL);
 
 			buf[0] = cycles; 
-			buf[1] = (long)(1000*(timeval_curr_time.tv_sec) + timeval_curr_time.tv_usec/1000 - start_time);
+			buf[1] = (unsigned long)(1000*(timeval_curr_time.tv_sec) + timeval_curr_time.tv_usec/1000 - start_time);
 
 			for (i = 0; i < DET_NUM; i++) {
-				buf[2 + i] = (long)(intens[i].counts);
+				buf[2 + i] = (unsigned long)(intens[i].counts);
 			}
 
 			int diff_sec = seconds - timeval_curr_time.tv_sec;
 			int diff_usec = u_seconds - timeval_curr_time.tv_usec;
-			buf[6] = (long)(-1.0*(1000*diff_sec + diff_usec/1000.0));
+			buf[6] = (unsigned long)(-1.0*(1000*diff_sec + diff_usec/1000.0));
 			
 			seconds = timeval_curr_time.tv_sec;
 			u_seconds = timeval_curr_time.tv_usec;
@@ -403,7 +411,9 @@ int main(int argc, char **argv)
 			zmq_send(zmq_publisher, buf, sizeof(buf), 0);
 
 #ifdef DEBUG
-			print_buf(buf);
+			printf("intents[0].counts = %d \n", intens[0].counts);
+			
+			print_buf(out_buf_log, buf);
 #endif
 
 		}
@@ -444,18 +454,37 @@ int main(int argc, char **argv)
 	save_histo_in_file(out_histo_fd, histo_en, start);
 	save_histo_in_ascii(out_foldername, histo_en, start);
 
+	for (i = 0; i < 16; i++) {
+		close(out_histo_fd[i]);
+	}
+	free(out_histo_fd); out_histo_fd = NULL;
+
+	char *out_num_foldername = get_num_foldername_spectra(out_foldername);
+	printf("out_num_foldername = %s\n", out_num_foldername);
+	if (out_num_foldername != NULL) {
+		out_histo_fd = open_files_for_histo(out_num_foldername);
+		save_histo_in_file(out_histo_fd, histo_en, start);
+
+		free(out_num_foldername);
+	}
+
+	for (i = 0; i < 16; i++) {
+		close(out_histo_fd[i]);
+	}
+	free(out_histo_fd); out_histo_fd = NULL;
+
 	exit_controller(usb_h);
 
 	free_mem_data(&data);
 	free_mem_events(&events);
 	free_mem_histo(&histo_en, &start);
 
-	close(out_fd);
-	for (i = 0; i < 16; i++) {
-		close(out_histo_fd[i]);
-	}
-	free(out_histo_fd); out_histo_fd = NULL;
+	close(out_sgnl_fd);
 	fclose(out_EbE_fd);
+
+#ifdef DEBUG
+	fclose(out_buf_log);
+#endif
 
 	return 0;
 }

@@ -341,6 +341,9 @@ int get_det_counts(int **data, intens_t intens[], int count_flag)
 				intens[j].counts = data[i][SIZEOF_SIGNAL - 2]; 
 				intens[j].get_flag = 0;
 				//intens[j].get_flag++;
+				#ifdef DEBUG
+				printf("counts[%d] = %d\n", j, data[i][SIZEOF_SIGNAL - 2]);
+				#endif
 			}
 		}
 	}
