@@ -240,10 +240,7 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	int det_counts = 0;
 	unsigned char buf[SIZEOF_DATA_EP] = {0};
 
-	//remove after tests
-	#ifdef DEBUG
 	int test_cntrl = 0;
-	#endif
 
 	//...malloc data...
 	if (data == NULL) {
@@ -272,11 +269,18 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 
 	
 	while ( (res = control_test(usb_h, CONTROL_REQUEST_TYPE_IN)) != 1 ) {
-		#ifdef DEBUG
 		test_cntrl++;
-		#endif
+		if (test_cntrl >= 10000) {
+			fprintf(stderr, "test_cntrl = %d", test_cntrl);
 
-		;
+			res = control_send_comm(usb_h, "r", 0);
+
+			fprintf(stderr, "test_cntrl = %d, USB controller reset was made\n", test_cntrl);
+
+			if (res != 0) {
+				return NULL;
+			}
+		}
 	}
 	
 	#ifdef DEBUG
@@ -341,9 +345,6 @@ int get_det_counts(int **data, intens_t intens[], int count_flag)
 				intens[j].counts = data[i][SIZEOF_SIGNAL - 2]; 
 				intens[j].get_flag = 0;
 				//intens[j].get_flag++;
-				#ifdef DEBUG
-				printf("counts[%d] = %d\n", j, data[i][SIZEOF_SIGNAL - 2]);
-				#endif
 			}
 		}
 	}

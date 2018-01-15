@@ -411,8 +411,6 @@ int main(int argc, char **argv)
 			zmq_send(zmq_publisher, buf, sizeof(buf), 0);
 
 #ifdef DEBUG
-			printf("intents[0].counts = %d \n", intens[0].counts);
-			
 			print_buf(out_buf_log, buf);
 #endif
 
