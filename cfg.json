@@ -1,11 +1,11 @@
 {
-	"porog for detectors": [120, 120, 120, 120],
+	"porog for detectors": [350, 350, 120, 120],
 	"time of coincidence [ch]": 80,
 	"coinc mode?": "True",
-	"time of exposition [s]": 600000,
-	"histo folder": "/home/das/job/dsp/test/spectra/171223",
-	"en_range D1": [380, 460, 1400, 1600],
-	"en_range D2": [360, 450, 1400, 1570],
-	"en_range D3": [400, 520, 1600, 1800],
-	"en_range D4": [320, 415, 1240, 1390]
+	"time of exposition [s]": 100,
+	"histo folder": "/home/das/job/dsp/test/spectra/181126_137Cs_100s_test_ENspk_2",
+	"en_range D1": [2723, 3051, 3080, 3382],
+	"en_range D2": [2661, 2984, 3017, 3363],
+	"en_range D3": [2332, 2618, 2620, 3171],
+	"en_range D4": [3173, 3463, 3535, 3968]
 }

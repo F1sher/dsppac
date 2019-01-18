@@ -1,6 +1,6 @@
 #include "parse_args.h"
 
-static const char *out_foldername_default = "/home/das/job/dsp/test/histos";
+static const char *out_foldername_default = "/home/das/job/dsp/test/histos/";
 
 const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, int *with_signal_flag, unsigned int *time, int en_range[][4])
 {
@@ -320,4 +320,63 @@ void set_const_params(const_t const_params)
 	CFT_fraction = const_params.CFT_fraction;
 	T_SCALE[0] = const_params.T_SCALE[0];
 	T_SCALE[1] = const_params.T_SCALE[1];
+}
+
+
+int is_uinput_yes()
+{
+	char uinput[5];
+
+	fgets(uinput, 5, stdin);
+
+	if (strcmp("y\n", uinput) == 0) {
+		return 1;
+	}
+	else if (strcmp("Y\n", uinput) == 0) {
+		return 1;
+	}
+	else if (strcmp("yes\n", uinput) == 0) {
+		return 1;
+	}
+	else if (strcmp("Yes\n", uinput) == 0) {
+		return 1;
+	}
+	else if (strcmp("YES\n", uinput) == 0) {
+		return 1;
+	}
+
+	return 0;
+}
+
+char *get_num_foldername_spectra(const char *out_foldername)
+{
+	DIR *dir;
+	int max_d_nums = 128;
+	int i = 0;
+	char *buf = (char *)malloc(strlen(out_foldername) + 5);
+
+	for (i = 0; i <= max_d_nums - 1; i++) {
+		sprintf(buf, "%s%d/", out_foldername, i);
+		
+		dir = opendir(buf);
+		
+		if (dir) {
+			/* Directory exists. */
+			closedir(dir);
+		}
+		else if (errno == ENOENT) {
+			/* Directory does not exist. */
+			
+			return buf;
+		}
+		else {
+			/* opendir() failed for some other reason. */
+			
+			break;
+		}
+	}
+
+	free(buf);
+
+	return NULL;
 }

@@ -1,6 +1,8 @@
 #ifndef PARSE_ARGS_H_
 #define PARSE_ARGS_H_
 
+#include <dirent.h>
+#include <errno.h>
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,5 +31,7 @@ const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, int 
 
 int const_parser(const char *const_filename, const_t *const_params);
 void set_const_params(const_t const_params);
+int is_uinput_yes();
+char *get_num_foldername_spectra(const char *out_foldername);
 
 #endif

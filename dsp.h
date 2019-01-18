@@ -11,16 +11,19 @@
 #include <getopt.h>
 #include <math.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 
 #include <libusb-1.0/libusb.h>
 #include <cyusb.h>
+
+#include "sclog4c/sclog4c.h"
 
 
 typedef struct {

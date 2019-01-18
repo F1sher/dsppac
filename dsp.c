@@ -240,7 +240,7 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	int det_counts = 0;
 	unsigned char buf[SIZEOF_DATA_EP] = {0};
 
-	int test_cntrl = 0;
+	unsigned long int test_cntrl = 0;
 
 	//...malloc data...
 	if (data == NULL) {
@@ -266,28 +266,36 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 		}
 	}
 	//...check malloc errors...
-
 	
 	while ( (res = control_test(usb_h, CONTROL_REQUEST_TYPE_IN)) != 1 ) {
 		test_cntrl++;
-		if (test_cntrl >= 10000) {
-			fprintf(stderr, "test_cntrl = %d", test_cntrl);
+		if (test_cntrl >= 500000) {
+			fprintf(stderr, "too large test_cntrl = %ld. ", test_cntrl);
+
+			test_cntrl = 0;
+
+			//upload FW to controller
+			fprintf(stderr, "Uploading FW to controller...\n");
+
+			res = system("/home/das/Загрузки/cyusb_linux_1.0.4/src/download_fx2 -i /home/das/job/plis/512x4.hex -t RAM");
+
+			if (WEXITSTATUS(res) != 0) {
+				fprintf(stderr, "Error in download_fx2. Return code = %d\n", WEXITSTATUS(res));
+				
+				return NULL;
+			}
 
 			res = control_send_comm(usb_h, "r", 0);
 
-			fprintf(stderr, "test_cntrl = %d, USB controller reset was made\n", test_cntrl);
+			fprintf(stderr, "USB controller reset was made\n");
 
 			if (res != 0) {
 				return NULL;
 			}
+
+			sleep(1);
 		}
 	}
-	
-	#ifdef DEBUG
-	//if (test_cntrl != 0) {
-	//	printf("test_cntrl = %d\n", test_cntrl);
-	//}
-	#endif
 
 	res = cyusb_bulk_transfer(usb_h, IN_EP, buf, SIZEOF_DATA_EP, &trans, 100);
 	if (res != 0) {
@@ -977,7 +985,7 @@ int *open_files_for_histo(const char *foldername)
 	ret = stat(foldername, &st);
     if (ret == -1) {
 		#ifdef DEBUG
-		fprintf(stderr, "stat(%s) returns -1\n", foldername);
+		fprintf(stderr, "stat(%s) returns -1. The dir will be created\n", foldername);
 		#endif
         ret = mkdir(foldername, 0777);
 		if (ret == -1) {

@@ -217,12 +217,10 @@ class UI():
             self.t_axes[i].set_ylim(top = max_histo_t)
 
     def update_Figs(self, histo):
-        print("!!!UPDATE!!!")
-
         histo_np_arr = np.array(histo)
 
         max_histo_en = histo_np_arr[0:const.DET_NUM].max() or 1
-        max_histo_t = histo_np_arr[const.DET_NUM:].max() or 1
+        max_histo_t = histo_np_arr[const.DET_NUM:,1:].max() or 1
 
         ###for test
         t = time()
@@ -253,8 +251,13 @@ class UI():
         for i in range(0, const.DET_NUM):
             if det_counts[i] == 0:
                 all_zero_counts += 1
-
-            text = "D{:d}    {:.2f}K".format(i + 1, det_counts[i]/1e3)
+            
+            text = "D{:d}    ".format(i + 1)
+            if det_counts[i] < 1e3:
+                text += "{:.0f}".format(det_counts[i])
+            else:
+                text += "{:.2f}K".format(det_counts[i]/1e3)
+            #text = "D{:d}    {:.2f}K".format(i + 1, det_counts[i]/1e3)
             if i == 0:
                 self.en_fig[i].suptitle(text, x=0.45, y=0.95)
             else:
@@ -738,7 +741,15 @@ class FPGA():
             self.porog[i] = int(self.entry_porog[i].get_text())
 
         self.delay = int(self.entry_delay.get_text())
-        self.acq_time = int(self.entry_acq_time.get_text())
+        acq_time_s = self.entry_acq_time.get_text()
+        if acq_time_s[-1] == "m":
+            self.acq_time = 60 * int(acq_time_s[:-1])
+        elif acq_time_s[-1] == "h":
+            self.acq_time = 60 * 60 * int(acq_time_s[:-1])
+        elif acq_time_s[-1] == "d":
+            self.acq_time = 24 * 60 * 60 * int(acq_time_s[:-1])
+        else:
+            self.acq_time = int(acq_time_s)
 
         self.histo_folder = self.filechooser_histo.get_filename()
         
@@ -761,7 +772,10 @@ class Hdrainer():
         self.time = time
         self.coinc = coinc
         self.en_range = en_range
-        self.out_foldername = out_foldername
+        if out_foldername[-1] == "/":
+            self.out_foldername = out_foldername
+        else:
+            self.out_foldername = out_foldername + "/"
 
         self.cycles_per_time = 0
         self.exec_time = 0

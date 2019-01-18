@@ -192,7 +192,7 @@
               <object class="GtkLabel" id="lbl_acq_time">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">ACQ time [s]:</property>
+                <property name="label" translatable="yes">ACQ time:</property>
                 <property name="ellipsize">end</property>
                 <property name="angle">0.01</property>
               </object>

@@ -79,7 +79,7 @@ void catch_alarm(int sig_num)
 
 void catch_timer(int signum, siginfo_t *info, void *ptr)
 {
-	static unsigned int timer = 0;
+	static unsigned long int timer = 0;
 	timer++;
 
 	if ( (timer % CALC_TIME == 0) ) {
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 	res = init_controller(&usb_h);
 	if (res != 0) {
 		fprintf(stderr, "Error in init_controller()\n");
-		logmf(SL4C_ERROR, "Error in init_controller()\n");
+		logm(SL4C_ERROR, "Error in init_controller()\n");
 
 		return -1;
 	}
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 		exit_controller(usb_h);
 
 		fprintf(stderr, "Error in parse_and_give_comm()\n");
-		logmf(SL4C_ERROR, "Error in parse_and_give_comm()\n");
+		logm(SL4C_ERROR, "Error in parse_and_give_comm()\n");
 
 		return -1;
 	}
@@ -152,10 +152,9 @@ int main(int argc, char **argv)
 	set_const_params(const_params);
 	
 #ifdef DEBUG
-	logmf(SL4C_FINE, "L = %d, K = %d | i_min_s = %d AVERAGE_trap = %d\n", L_trap, K_trap, I_MIN_S_SHIFT_trap, AVERAGE_trap);
-	logmf(SL4C_FINE, "T_SCALE[] = {%.2f, %.2f}\n", T_SCALE[0], T_SCALE[1]);
+	logm(SL4C_FINE, "L = %d, K = %d | i_min_s = %d AVERAGE_trap = %d\n", L_trap, K_trap, I_MIN_S_SHIFT_trap, AVERAGE_trap);
+	logm(SL4C_FINE, "T_SCALE[] = {%.2f, %.2f}\n", T_SCALE[0], T_SCALE[1]);
 
-	printf("\n");
 	int j;
 	for (i = 0; i < 4; i++) {
 		for (j = 0; j < 4; j++) 
@@ -264,7 +263,6 @@ int main(int argc, char **argv)
 	}
 	
 	FILE *out_EbE_fd = open_file_EbE("/home/das/job/vukdriver-master/event-by-event.out");
-
 	if (out_EbE_fd == NULL) {
 		exit_controller(usb_h);
 
@@ -371,15 +369,11 @@ int main(int argc, char **argv)
 		if ((calc_flag) && (counter_events != 0)) {
 			calc_flag = 0;
 
-#ifdef DEBUG
-			printf("calc&save histo | send info to socket\n");
-#endif
-
 			calc_histo(events, counter_events, en_range, histo_en, start);
 			save_histo_in_file(out_histo_fd, histo_en, start);
 
 			//write Event-by-event data in file
-			//filesize limit = 2 GB
+			//filesize limit is 2 GB
 			//fill_EbE(out_EbE_fd, events, counter_events);
 
 			counter_events = 0;
@@ -413,7 +407,6 @@ int main(int argc, char **argv)
 #ifdef DEBUG
 			print_buf(out_buf_log, buf);
 #endif
-
 		}
 
 		if (counter_events + 4 < CALC_SIZE) {

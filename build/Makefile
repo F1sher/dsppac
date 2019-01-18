@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-g -Wall -O0
 LFLAGS=-L ./lib/
-IFLAGS=-I/usr/local/include
+IFLAGS=-I/usr/local/include -I./sclog4c/include
 LIBS=-lcyusb -lusb-1.0 -lm -ljsmn
 DEPS=../dsp.h ../dsp.c ../parse_args.h ../parse_args.c
 SRCS=../dsp.c ../parse_args.c
@@ -16,7 +16,7 @@ drainer: $(DEPS) ../drainer.c
 	$(CC) -o $@ ../drainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
 hdrainer: $(DEPS) ../hdrainer.c
-	$(CC) -o $@ ../hdrainer.c $(SRCS) $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lzmq -lgsl -lgslcblas -DDEBUG 
+	$(CC) -o $@ ../hdrainer.c $(SRCS) ./sclog4c/src/libsclog4c.a $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lzmq -lgsl -lgslcblas -DDEBUG 
 
 oconsumer: $(DEPS) ../oconsumer.c
 	$(CC) -o $@ ../oconsumer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
