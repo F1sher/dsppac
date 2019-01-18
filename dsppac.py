@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3
 
 import json
 import gi
@@ -16,7 +16,7 @@ from struct import error as struct_error_unpack
 sys.path.append("./ui")
 import const
 
-PYTHON_EXEC = "python3.4"
+PYTHON_EXEC = "python3"
 STUFF_FOLDER = "./"
 MAIN_PROG_FOLDER = "/home/das/job/dsp/"
 FPGA_PROG = "send_comm"
@@ -425,7 +425,7 @@ class DSPPAC(Gtk.Window):
             print("config_vals = {}".format(config_vals))
             
             self.porog = config_vals["porog for detectors"]#[90, 90, 90, 90]
-            self.delay = config_vals["time of coincidence"]#100
+            self.delay = config_vals["time of coincidence [ch]"]#100
             self.coinc = 1 if config_vals["coinc mode?"] == "True" else 0#1
             self.acq_time = config_vals["time of exposition [s]"]#10
             self.histo_folder = config_vals["histo folder"]
@@ -437,7 +437,7 @@ class DSPPAC(Gtk.Window):
         with open(path_cfg_file, 'w') as cfg_file:
             config = {}
             config["porog for detectors"] = self.porog
-            config["time of coincidence"] = self.delay
+            config["time of coincidence [ch]"] = self.delay
             config["coinc mode?"] = "True" if self.coinc == 1 else "False"
             config["time of exposition [s]"] = self.acq_time
             config["histo folder"] = self.histo_folder
@@ -452,7 +452,7 @@ class DSPPAC(Gtk.Window):
             def dict_to_true_cfg_str(d):
                 res = "{\n"
                 res += "\t\"porog for detectors\": " + str(d["porog for detectors"]) + ",\n"
-                res += "\t\"time of coincidence\": " + str(d["time of coincidence"]) + ",\n"
+                res += "\t\"time of coincidence [ch]\": " + str(d["time of coincidence [ch]"]) + ",\n"
                 res += "\t\"coinc mode?\": " + "\"" + str(d["coinc mode?"]) + "\"" + ",\n"
                 res += "\t\"time of exposition [s]\": " + str(d["time of exposition [s]"]) + ",\n"
                 res += "\t\"histo folder\": " + "\"" + str(d["histo folder"]) + "\"" + ",\n"
