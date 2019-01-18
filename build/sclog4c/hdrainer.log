@@ -1,0 +1,4 @@
+test.c:17: info: In function main: This is foo in function main (expected).
+test.c:17: info: In function main: This is foo in function main (expected).
+test.c:17: info: In function main: This is foo in function main (expected).
+test.c:17: info: In function main: This is foo in function main (expected).
