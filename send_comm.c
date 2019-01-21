@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 	}
 
     printf("argv = %s\n", *argv);
-    const char *out_foldername = parse_and_give_comm(argc, argv, usb_h, &time);
+    const char *out_foldername = parse_and_give_comm(argc, argv, usb_h, NULL, &time, NULL);
     if (out_foldername == NULL) {
         exit_controller(usb_h);
         
