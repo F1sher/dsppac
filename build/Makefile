@@ -22,7 +22,7 @@ oconsumer: $(DEPS) ../oconsumer.c
 	$(CC) -o $@ ../oconsumer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
 
 send_comm: $(DEPS) ../send_comm.c
-	$(CC) -o $@ ../send_comm.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
+	$(CC) -o $@ ../send_comm.c $(SRCS) $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lgsl -lgslcblas
 
 usb_speedtest: $(DEPS) ../usb_speedtest.c
 	$(CC) -o $@ ../usb_speedtest.c $(SRCS) $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lgsl -lgslcblas -DDEBUG
