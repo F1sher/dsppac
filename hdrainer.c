@@ -17,6 +17,7 @@ unsigned int time_acq = 100;
 static unsigned long int cycles = 0;
 const char *CONST_file_path = "/home/das/job/dsp/constants.json";
 const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res.sgnl";
+const char *EBE_file_path = "/home/das/job/event-by-event.out";
 int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
 double t_scale[2] = {100.0, 10.0};
 
@@ -262,7 +263,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	FILE *out_EbE_fd = open_file_EbE("/home/das/job/vukdriver-master/event-by-event.out");
+	FILE *out_EbE_fd = open_file_EbE(EBE_file_path);
 	if (out_EbE_fd == NULL) {
 		exit_controller(usb_h);
 
@@ -300,7 +301,7 @@ int main(int argc, char **argv)
 	}
 
 #ifdef DEBUG
-	FILE *out_buf_log = fopen("/home/das/output_hdrainer.txt", "w+");
+	FILE *out_buf_log = fopen("/home/das/job/output_hdrainer.txt", "w+");
 #endif
 
 	//set timer alarm and its handler
