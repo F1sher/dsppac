@@ -164,7 +164,6 @@ int main(int argc, char **argv)
 	}
 
 	fprintf(stdout, "out_foldername = %s\n", out_foldername);
-
 	printf("EN_normal = %.2f | K_trap = %d | L_trap = %d | Tau_trap = %.2f\n", \
 		EN_normal, K_trap, L_trap, Tau_trap);
     printf("INT_steps_back = %d | INT_steps_forw = %d\n", INTEGRAL_steps_back, INTEGRAL_steps_forw);
@@ -340,6 +339,15 @@ int main(int argc, char **argv)
 		data = read_data_ep(usb_h, data);
 		if (data == NULL) {
 			fprintf(stderr, "Error in read_data_ep()\n");
+			logm(SL4C_ERROR, "Error in read_data_ep()\n");
+
+			gettimeofday(&timeval_curr_time, NULL);
+
+			buf[0] = cycles; 
+			buf[1] = (unsigned long)(1000*(timeval_curr_time.tv_sec) + timeval_curr_time.tv_usec/1000 - start_time);
+			buf[2] = buf[3] = buf[4] = buf[5] = 0;
+			buf[6] = 0;
+			zmq_send(zmq_publisher, buf, sizeof(buf), 0);
 
 			exit_controller(usb_h);
 
@@ -354,6 +362,8 @@ int main(int argc, char **argv)
 			free(out_histo_fd); out_histo_fd = NULL;
 			fclose(out_EbE_fd);
 	
+			
+
 			return -1;
 		}
 
