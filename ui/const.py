@@ -1,4 +1,6 @@
 import sys
+from os import path
+
 
 class _const:
     def __init__(self):
@@ -6,15 +8,16 @@ class _const:
         self.TXT_EDITOR = "gedit"
 
         self.STUFF_FOLDER = "./"
-        self.MAIN_PROG_FOLDER = "/home/das/job/dsp/"
+        self.MAIN_PROG_FOLDER = path.split(path.split(path.realpath(__file__))[0])[0] + "/" #should be smth like "/home/das/job/dsp/"
+        print(self.MAIN_PROG_FOLDER)
         self.UI_FOLDER = "ui/"
         self.FPGA_PROG = "send_comm"
         
         self.HDRAINER_EXE = "hdrainer"
         self.ONLINE_EXE = "oconsumer"
         
-        self.HISTO_FOLDER = "/home/das/job/dsp/test/spectra"
-        self.DEFAULT_CURR_HISTO_FOLDER = "/home/das/job/plis/histo/apr14_4det_porog=90_delay=100_coinc_10h_night/"
+        self.HISTO_FOLDER = path.join(self.MAIN_PROG_FOLDER, "test/spectra/")
+        self.DEFAULT_CURR_HISTO_FOLDER = path.join(self.HISTO_FOLDER, "apr14_4det_porog=90_delay=100_coinc_10h_night/")
 
         self.SOCKET_COMMUNICATION_FILE = "./hidden"
         self.CFG_FILE = "cfg.json"
@@ -36,9 +39,11 @@ class _const:
 
 
     class ConstError(TypeError): pass
+
     def __setattr__(self, name, value):
         if name in self.__dict__:
             raise self.ConstError
         self.__dict__[name] = value
+
 
 sys.modules[__name__] = _const()
