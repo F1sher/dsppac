@@ -496,7 +496,6 @@ class UI():
 
     
     def statusbar_push(self, context, normal_msg="", err_msg=""):
-        print("context = {}".format(context))
         context_id = self.statusbar.get_context_id(context)
         if err_msg:
             msg = "!Error!: " + err_msg
