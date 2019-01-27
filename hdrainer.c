@@ -366,6 +366,9 @@ int main(int argc, char **argv)
 
 			return -1;
 		}
+#ifdef DEBUG
+		logm(SL4C_INFO, "data was read from ep\n");
+#endif
 
 		get_det_counts(data, intens, 0);
 

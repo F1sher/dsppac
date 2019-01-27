@@ -34,7 +34,6 @@ static int flag_fifo_wr = 1;
 const char *FIFO_FOLDERNAME = "/home/das/job/dsp/fifos";
 
 
-
 int init_controller(cyusb_handle **usb_h)
 {
     int ret = 0;
@@ -101,7 +100,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
 {
 	int ret = 0;
 	int transferred = 0;
-	unsigned char buf[512];
+	unsigned char buf[512] = {0};
 	
 	//word #1 = 1; word #2 = porog - установка порога
 	//word #1 = 3; word #2 = 1 - сброс (reset)
@@ -124,7 +123,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
         
         printf("command = %s rangeset buf[0] = %u buf[2] = %u buf[3] = %u args = %d\n", command, buf[0], buf[2], buf[3], args);
         
-        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 0);
+        ret = cyusb_bulk_transfer(usb_h, OUT_EP, buf, 512, &transferred, 10);
         if (ret != 0) {
             cyusb_close();
             fprintf(stderr, "ERROR WHILE SET RANGE | %s: transferred %d bytes while should be 512\n", libusb_error_name(ret), transferred);
@@ -161,7 +160,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
 			return -1;
 		}
 
-        printf("wait %u\n", args);
+        printf("wait %u buf[2] = %u buf[3] = %u\n", args, buf[2], buf[3]);
 	}
     else if (!strcmp(command, "t")) {
         buf[0] = 1;
@@ -277,7 +276,8 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 			//upload FW to controller
 			fprintf(stderr, "Uploading FW to controller...\n");
 
-			res = system("/home/das/Загрузки/cyusb_linux_1.0.4/src/download_fx2 -i /home/das/job/plis/512x4.hex -t RAM");
+			//change filename of .hex !!!!
+			res = system("/home/das/Загрузки/cyusb_linux_1.0.4/src/download_fx2 -i /home/das/job/plis/512x4_1.hex -t RAM");
 
 			if (WEXITSTATUS(res) != 0) {
 				fprintf(stderr, "Error in download_fx2. Return code = %d\n", WEXITSTATUS(res));
@@ -297,7 +297,7 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 		}
 	}
 
-	res = cyusb_bulk_transfer(usb_h, IN_EP, buf, SIZEOF_DATA_EP, &trans, 100);
+	res = cyusb_bulk_transfer(usb_h, IN_EP, buf, SIZEOF_DATA_EP, &trans, 0);
 	if (res != 0) {
 		if (trans != SIZEOF_DATA_EP) {
 			//ERROR in TRANSFER SIZE OF DATA
@@ -311,6 +311,9 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 	for (i = 0; i < 4; i++) {
 		//Set Det number
 		det_num = (buf[2*SIZEOF_SIGNAL*(i + 1) - 1] >> 6) + 1;
+#ifdef DEBUG
+		printf("i = %d, det_num = %d\n", i, det_num);
+#endif
 		//Set Counter
 		det_counts = (buf[2*SIZEOF_SIGNAL*(i) + 1] << 24)  + (buf[2*SIZEOF_SIGNAL*(i)] << 16) + (buf[2*SIZEOF_SIGNAL*(i) + 3] << 8) + buf[2*SIZEOF_SIGNAL*(i) + 2];
 		//det_counts = 8000;
