@@ -275,9 +275,8 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 
 			//upload FW to controller
 			fprintf(stderr, "Uploading FW to controller...\n");
-
 			//change filename of .hex !!!!
-			res = system("/home/das/Загрузки/cyusb_linux_1.0.4/src/download_fx2 -i /home/das/job/plis/512x4_1.hex -t RAM");
+			res = system("/home/das/Загрузки/cyusb_linux_1.0.4/src/download_fx2 -i /home/das/job/plis/512x4.hex -t RAM");
 
 			if (WEXITSTATUS(res) != 0) {
 				fprintf(stderr, "Error in download_fx2. Return code = %d\n", WEXITSTATUS(res));
@@ -294,6 +293,11 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 			}
 
 			sleep(1);
+
+			/*
+			if ( (res = control_test(usb_h, CONTROL_REQUEST_TYPE_IN)) != 1 ) {
+				break;
+				}*/
 		}
 	}
 
