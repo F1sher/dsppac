@@ -9,13 +9,7 @@ SRCS=../dsp.c ../parse_args.c
 #UNITY for unit tests
 UNITY_SRC=../unity/unity.c
 
-main_test_1: $(DEPS) ../main_test_1.c $(UNITY_SRC)
-	$(CC) -o $@ ../main_test_1.c $(UNITY_SRC) $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
-
-drainer: $(DEPS) ../drainer.c
-	$(CC) -o $@ ../drainer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)
-
-hdrainer: $(DEPS) ../hdrainer.c
+hdrainer: $(DEPS) ../hdrainer.c send_comm
 	$(CC) -o $@ ../hdrainer.c $(SRCS) ./sclog4c/src/libsclog4c.a $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lzmq -lgsl -lgslcblas -DDEBUG 
 
 oconsumer: $(DEPS) ../oconsumer.c

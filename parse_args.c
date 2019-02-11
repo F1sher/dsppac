@@ -45,28 +45,28 @@ const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, int 
                 token = strtok(NULL, " ");
             }
 			
-            usleep(100);
+            usleep(10000);
 			res = control_send_comm(usb_h, "s0", p[0]);
             
             if (res != 0) {
                 return NULL;
             }
             
-            usleep(100);
+            usleep(10000);
 			res = control_send_comm(usb_h, "s1", p[1]);
             
             if (res != 0) {
                 return NULL;
             }
           
-			usleep(100);
+			usleep(10000);
             res = control_send_comm(usb_h, "s2", p[2]);
           
             if (res != 0) {
                 return NULL;
             }
             
-			usleep(100);
+			usleep(10000);
             res = control_send_comm(usb_h, "s3", p[3]);
             
             if (res != 0) {
@@ -78,7 +78,7 @@ const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, int 
 			//set delay
 			delay = atoi(optarg);
             
-            usleep(100);
+            usleep(10000);
 			res = control_send_comm(usb_h, "w", delay);
             
             if (res != 0) {
@@ -354,6 +354,9 @@ char *get_num_foldername_spectra(const char *out_foldername)
 	int max_d_nums = 128;
 	int i = 0;
 	char *buf = (char *)malloc(strlen(out_foldername) + 5);
+	if (buf == NULL) {
+		return NULL;
+	}
 
 	for (i = 0; i <= max_d_nums - 1; i++) {
 		sprintf(buf, "%s%d/", out_foldername, i);

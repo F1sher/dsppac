@@ -214,7 +214,7 @@ int control_send_comm(cyusb_handle *usb_h, const char *command, int args)
 ///FUNCTIONS FOR READ DATA from ENDPOINT
 int control_test(cyusb_handle *usb_h, unsigned char bmRequestType)
 {
-	unsigned char datac[2] = {15};
+	unsigned char datac[2] = {15, 15};
 	
 	cyusb_control_transfer(usb_h, bmRequestType, 0x00, 0x0000, 0x0000, datac, 2, 0); //wIndex = 0x0000 or LIBUSB_ENDPOINT_IN | IN_EP 0b0000 0000 1000 xxxx
 	
@@ -316,7 +316,7 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 		//Set Det number
 		det_num = (buf[2*SIZEOF_SIGNAL*(i + 1) - 1] >> 6) + 1;
 #ifdef DEBUG
-		printf("i = %d, det_num = %d\n", i, det_num);
+		//printf("i = %d, det_num = %d\n", i, det_num);
 #endif
 		//Set Counter
 		det_counts = (buf[2*SIZEOF_SIGNAL*(i) + 1] << 24)  + (buf[2*SIZEOF_SIGNAL*(i)] << 16) + (buf[2*SIZEOF_SIGNAL*(i) + 3] << 8) + buf[2*SIZEOF_SIGNAL*(i) + 2];
@@ -450,7 +450,11 @@ double area_trap_signal(int *a)
         }
     }
     
-    if (i_min_s + L_trap - K_trap > SIZEOF_SIGNAL - 1) {
+    if (i_min_s + L_trap - K_trap > SIZEOF_SIGNAL - 1) {		
+		free(a_clear); a_clear = NULL;
+		free(cTr); cTr = NULL;
+		free(cs); cs = NULL;
+
 	    return 0.0;
     }
     
@@ -616,7 +620,6 @@ double time_cubic_signal(int *a)
 {
     int i = 0;
     int j = 0;
-    int ret = 0;
 
     int min_a;
     int min_a_i = 0;
@@ -646,7 +649,7 @@ double time_cubic_signal(int *a)
 		ya[i] = (double)(a[j] - edge);
     }
     //we are interesting in x0 position for time stamp
-    ret = gsl_spline_init(spline, xa, ya, 4);
+    int ret = gsl_spline_init(spline, xa, ya, 4);
     //CHECK ret VALUE
 
     //printf("ret in cftrace_t = %.2f\n", x0);
@@ -986,6 +989,9 @@ int *open_files_for_histo(const char *foldername)
 	int *out_fd = (int *)calloc(16, sizeof(int));
 
 	if ( (foldername == NULL) || strlen(foldername) == 0 ) {
+		free(out_fd); out_fd = NULL;
+		free(tempstr); tempstr = NULL;
+
 		return NULL;
 	}
 	
