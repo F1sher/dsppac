@@ -32,6 +32,8 @@ double CFT_fraction = 0.4;
 static int flag_fifo_wr = 1;
 
 const char *FIFO_FOLDERNAME = "/home/das/job/dsp/fifos";
+const char *DOWNLOAD_FX2_PATH = "/home/das/Загрузки/cyusb_linux_1.0.4/src/download_fx2";
+const char *USB_CNTRL_FRMWR_PATH = "/home/das/job/plis/512x4.hex";
 
 
 int init_controller(cyusb_handle **usb_h)
@@ -276,11 +278,13 @@ int **read_data_ep(cyusb_handle *usb_h, int **data)
 			//upload FW to controller
 			fprintf(stderr, "Uploading FW to controller...\n");
 			//change filename of .hex !!!!
-			res = system("/home/das/Загрузки/cyusb_linux_1.0.4/src/download_fx2 -i /home/das/job/plis/512x4.hex -t RAM");
+			char tempstr[2048] = {0};
+			snprintf(tempstr, 2048, "%s -i %s -t RAM", DOWNLOAD_FX2_PATH, USB_CNTRL_FRMWR_PATH);
 
 			if (WEXITSTATUS(res) != 0) {
 				fprintf(stderr, "Error in download_fx2. Return code = %d\n", WEXITSTATUS(res));
-				
+				fprintf(stderr, "system() call with arg %s\n", tempstr);
+
 				return NULL;
 			}
 
