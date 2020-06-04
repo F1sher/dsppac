@@ -13,7 +13,7 @@ from matplotlib.ticker import FuncFormatter
 
 import numpy as np
 
-from os import system
+from os import system, path, mkdir
 import os
 
 from signal import SIGUSR1
@@ -24,7 +24,7 @@ from socket import AF_UNIX
 from socket import SOCK_STREAM
 from socket import SOCK_DGRAM
 
-from struct import unpack
+from struct import unpack, pack
 from struct import error as struct_error
 
 from subprocess import call as subprocess_call
@@ -416,6 +416,7 @@ class UI():
 
     def on_save(self, *args):
         print("On save")
+        self.spectra.savebin_histo_files("/home/dasalam/job/test/dsppac_spk")
 
     def on_pause(self, *args):
         print("On pause")
@@ -514,7 +515,7 @@ class UI():
 
 
 class Spectra():
-    def __init__(self, foldername):
+    def __init__(self, foldername=None):
         if foldername is not None:
             self.histo = self.readbin_histo_files(foldername)
 
@@ -547,6 +548,26 @@ class Spectra():
         return res
 
 
+    def savebin_histo_files(self, foldername):
+        if path.isdir(foldername) == False:
+            mkdir(foldername)
+
+        histo_finisize = 512
+        i = 0
+        for fname in const.HISTO_FILE_NAMES:
+            with open(path.join(foldername, fname), "wb+") as fd:
+                fd.seek(histo_finisize, 0)
+                fd.write(pack(str(const.HIST_SIZE) + "i", *self.histo[i]))
+                i += 1
+        '''
+        i = const.DET_NUM
+        for fname in const.HISTO_FILE_NAMES[const.DET_NUM:16]:
+            with open(foldername + fname, "wb+") as fd:
+                fd.seek(histo_finisize, 0)
+                fd.write(pack(str(const.HIST_SIZE) + "i", histos[i]))
+                i += 1
+        '''
+                
 
 class FPGA():
     def __init__(self):
