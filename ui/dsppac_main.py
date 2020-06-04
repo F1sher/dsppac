@@ -40,6 +40,7 @@ from information import Information
 from zoom import Zoom
 from logger import Logger
 
+
 class UI():
     def __init__(self):
         self.builder = Gtk.Builder()
@@ -50,8 +51,9 @@ class UI():
             "on_quit": self.on_quit,
             "run_fpga": self.run_fpga,
             "run_dsp": self.run_dsp,
+            "run_histopac": self.run_histopac, ###change to self.run_histopac
+            "run_anizpac": self.run_anizpac, ###change to self.run_anizpac
             "run_pypac_signal": self.run_pypac_signal,
-            "run_pypac_histo": self.run_pypac_histo,
             "edit_config": self.edit_config,
             "edit_constants": self.edit_constants,
             "on_start": self.on_start,
@@ -295,8 +297,19 @@ class UI():
         print("Run dsp app")
         print(args)
 
+    def run_histopac(self, *args):
+        self.logger.info("Run histopac")
+        from os import chdir
+        chdir("/home/dasalam/job/histopac/")
+        system("{:s} {:s}".format("/home/dasalam/job/histopac/histopac.py", self.curr_histo_folder))
+
+    def run_anizpac(self, *args):
+        self.logger.info("Run anizpac")
+        #Chdir to anizpac
+        #call anizpac
+        
     def run_pypac_signal(self, *args):
-        print("Run pypac signal app")
+        self.logger.info("Run pypac signal app")
 
         file_list = os.listdir(self.curr_histo_folder)
         signal_file = None
