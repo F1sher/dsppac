@@ -50,7 +50,6 @@ class UI():
             "on_open": self.on_open,
             "on_quit": self.on_quit,
             "run_fpga": self.run_fpga,
-            "run_dsp": self.run_dsp,
             "run_histopac": self.run_histopac, ###change to self.run_histopac
             "run_anizpac": self.run_anizpac, ###change to self.run_anizpac
             "run_pypac_signal": self.run_pypac_signal,
@@ -292,10 +291,6 @@ class UI():
         print("Run fpga app")
         self.fpga = FPGA()
         self.fpga.win.show_all()
-
-    def run_dsp(self, *args):
-        print("Run dsp app")
-        print(args)
 
     def run_histopac(self, *args):
         self.logger.info("Run histopac")
