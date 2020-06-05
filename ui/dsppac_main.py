@@ -270,7 +270,8 @@ class UI():
     def on_open(self, *args):
         print("open histo")
 
-        fcd = Gtk.FileChooserDialog("Open", None, Gtk.FileChooserAction.SELECT_FOLDER, ("Cancel", Gtk.ResponseType.CANCEL, "Open", Gtk.ResponseType.OK))
+        fcd = Gtk.FileChooserDialog("Open", None, Gtk.FileChooserAction.SELECT_FOLDER, \
+                                    ("Cancel", Gtk.ResponseType.CANCEL, "Open", Gtk.ResponseType.OK))
         
         fcd.set_current_folder(self.curr_histo_folder)
 
@@ -415,8 +416,22 @@ class UI():
         self.hdrainer.stop()
 
     def on_save(self, *args):
-        print("On save")
-        self.spectra.savebin_histo_files("/home/dasalam/job/test/dsppac_spk")
+        self.logger.info("On save")
+        fcd = Gtk.FileChooserDialog(title="Save", parent=None, \
+                                    action=Gtk.FileChooserAction.SELECT_FOLDER)
+        fcd.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "Save", Gtk.ResponseType.OK)
+        fcd.set_current_folder(self.curr_histo_folder)
+
+        response = fcd.run()
+        if response == Gtk.ResponseType.OK:
+            self.curr_histo_folder = fcd.get_current_folder()
+            self.spectra.savebin_histo_files(self.curr_histo_folder)
+
+            fcd.destroy()
+        elif response == Gtk.ResponseType.CANCEL:
+            fcd.destroy()
+        else:
+            print(type(response), response)
 
     def on_pause(self, *args):
         print("On pause")
@@ -951,6 +966,7 @@ class Hdrainer():
         if self.child_pid > 0:
             os.kill(self.child_pid, SIGUSR1)
 
+            
 
 def main():
     ui = UI()
