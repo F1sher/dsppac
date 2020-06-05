@@ -23,6 +23,7 @@ class Zoom():
         self.t_h_step = zoom_args["t_h_step"]
 
         self.log_flag = False
+        self.t_log_flag = False
 
     def check_in_range(self):
         None
@@ -212,6 +213,39 @@ class Zoom():
             
             self.t_axes[i].set_xlim(x_l, x_r)
             self.t_fig[i].canvas.draw()
+
+    def t_log(self):
+        line = [0] * 12
+        data_y = [0] * 12
+
+        for i in range(0, 12):
+            line[i], = self.t_axes[i].lines
+
+        for i in range(0, 12):
+            data_y[i] = line[i].get_ydata()
+
+        data_y = np.array(data_y)
+        max_data_y = data_y.max() or 1
+
+        if not self.t_log_flag:
+            self.t_log_flag = True
+
+            y_bot, y_top = -1, np.log(max_data_y)
+            for i in range(0, 12):
+                self.t_axes[i].set_ylim(y_bot, y_top)
+                self.t_axes[i].lines[0].set_ydata(np.log(data_y[i] + 1))
+                
+                self.t_fig[i].canvas.draw()
+        else:
+            self.t_log_flag = False
+
+            y_bot, y_top = -1, np.exp(max_data_y)
+            for i in range(0, 12):
+                self.t_axes[i].set_ylim(y_bot, y_top)
+                self.t_axes[i].lines[0].set_ydata(np.exp(data_y[i]))
+
+                self.t_fig[i].canvas.draw()
+
 
     '''
     def __x_ticks_if_need(self, axes, x_l, x_r):

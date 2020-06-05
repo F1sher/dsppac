@@ -71,7 +71,8 @@ class UI():
             "zoom_en_zero": self.z_en_zero,
 
             "zoom_t_shrink": self.z_t_shrink,
-            "zoom_t_squeeze": self.z_t_squeeze
+            "zoom_t_squeeze": self.z_t_squeeze,
+            "zoom_t_log": self.z_t_log
         }
         self.builder.connect_signals(handlers)
 
@@ -467,6 +468,12 @@ class UI():
         print("z_en_log")
         self.zoom.en_log()
 
+        btn = args[0]
+        if btn.get_label() == "log":
+            btn.set_label("lin")
+        else:
+            btn.set_label("log")
+
     def z_en_zero(self, *args):
         print("z_en_zero")
         self.zoom.en_zero()
@@ -478,6 +485,16 @@ class UI():
     def z_t_squeeze(self, *args):
         print("z_t_squeeze")
         self.zoom.t_x_squeeze()
+
+    def z_t_log(self, *args):
+        print("z_t_log")
+        self.zoom.t_log()
+        
+        btn = args[0]
+        if btn.get_label() == "log":
+            btn.set_label("lin")
+        else:
+            btn.set_label("log")
 
 
     def read_plot_online_histo(self, hdir):
