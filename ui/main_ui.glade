@@ -221,7 +221,7 @@
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="pypac_signal_run_menuitem">
-                        <property name="label">Signalpac</property>
+                        <property name="label">Sigpac</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
