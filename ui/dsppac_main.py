@@ -9,7 +9,7 @@ from gi.repository import Gtk, GLib
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_gtk3agg import FigureCanvasGTK3Agg as FigureCanvas
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter, NullFormatter
 
 import numpy as np
 
@@ -116,6 +116,13 @@ class UI():
         return titles[i]
 
     def init_Figs(self):
+        def format_yticks(y, pos):
+            threshold_divider = 300
+            if y < threshold_divider:
+                return "{:.0f}".format(y)
+            else:
+                return "{:.1f}k".format(y/1e3)
+        
         self.en_fig = []
         self.en_axes = []
         for i in range(0, const.DET_NUM):
@@ -135,13 +142,11 @@ class UI():
             ###x, y ticks
             self.en_axes[i].set_xticks([0, 1000, 2000, 3000, 4000])
             self.en_axes[i].minorticks_on()
-            self.en_axes[i].xaxis.set_major_formatter( FuncFormatter(lambda x, pos: "{:.0f}k".format(x/1e3)) )
-
+#            self.en_axes[i].xaxis.set_major_formatter( FuncFormatter(lambda x, pos: "{:.0f}k".format(x/1e3)) )
             if i == 0:
-                self.en_axes[i].yaxis.set_major_formatter( FuncFormatter(lambda x, pos: "{:.1f}k".format(x/1e3)) )
+                self.en_axes[i].yaxis.set_major_formatter(FuncFormatter(format_yticks))
             else:
-                self.en_axes[i].yaxis.set_major_formatter( FuncFormatter(lambda x, pos: "") )
-                #self.en_axes[i].set_yticks([])
+                self.en_axes[i].yaxis.set_major_formatter(NullFormatter())
             ###
         
         self.t_fig = []
@@ -173,12 +178,11 @@ class UI():
             ###x, y ticks
             self.t_axes[i].set_xticks([0, 1000, 2000, 3000, 4000])
             self.t_axes[i].minorticks_on()
-            self.t_axes[i].xaxis.set_major_formatter( FuncFormatter(lambda x, pos: "{:.0f}k".format(x/1e3)) )
-
+            #self.t_axes[i].xaxis.set_major_formatter( FuncFormatter(lambda x, pos: "{:.0f}k".format(x/1e3)) )
             if (i == 0) or (i == 1):
-                self.t_axes[i].yaxis.set_major_formatter( FuncFormatter(lambda x, pos: "{:.1f}k".format(x/1e3)) )
+                self.t_axes[i].yaxis.set_major_formatter(FuncFormatter(format_yticks))
             else:
-                self.t_axes[i].yaxis.set_major_formatter( FuncFormatter(lambda x, pos: "") )
+                self.t_axes[i].yaxis.set_major_formatter(NullFormatter())
             ###
 
     def attach_Figs(self, grid):
@@ -230,14 +234,13 @@ class UI():
 
         print("max_histo_en = {}".format(max_histo_en))
         for i in range(0, const.DET_NUM):
-            #self.en_axes[i].set_xlim(left = 80, right = 100)
-            self.en_axes[i].set_ylim(top = max_histo_en)
-            self.en_axes_line[i].set_ydata( histo_np_arr[i] )
+            self.en_axes[i].set_ylim(bottom=-1, top=max_histo_en+1)
+            self.en_axes_line[i].set_ydata(histo_np_arr[i])
             self.en_fig[i].canvas.draw()
 
         for i in range(0, 12):
-            self.t_axes[i].set_ylim(top = max_histo_t)
-            self.t_axes_line[i].set_ydata( histo_np_arr[const.DET_NUM + i] )
+            self.t_axes[i].set_ylim(bottom=-1, top=max_histo_t+1)
+            self.t_axes_line[i].set_ydata(histo_np_arr[const.DET_NUM + i])
             self.t_fig[i].canvas.draw()
 
             text = "{}    {}".format(self.create_t_title(i), np.sum(histo_np_arr[const.DET_NUM+i][1:]))
