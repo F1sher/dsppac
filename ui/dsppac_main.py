@@ -633,7 +633,19 @@ class FPGA():
         self.entry_acq_time = self.builder.get_object("entry_acq_time")
 
         self.filechooser_histo = self.builder.get_object("filechooser_histo")
-
+        
+        for name in self.filechooser_histo.list_shortcut_folders():
+            self.filechooser_histo.remove_shortcut_folder(name)
+        #tests
+        print("Fchooser title = ", self.filechooser_histo.get_title())
+        #self.filechooser_histo.set_filename("/home/dasalam/job/")
+        #self.filechooser_histo.select_filename("/home/dasalam/job/")
+        #self.filechooser_histo.add_shortcut_folder("/home/dasalam/job/")
+        #self.filechooser_histo.set_current_name("/home/dasalam")
+        self.filechooser_histo.set_use_preview_label(True)
+        print(self.filechooser_histo.get_preview_widget())
+        #print(dir(self.filechooser_histo))
+        
         self.entry_en_range = []
         for i in range(0, const.DET_NUM):
             self.entry_en_range.append( self.builder.get_object("entry_en_range_" + str(i))  )
@@ -791,8 +803,8 @@ class FPGA():
         self.entry_delay.set_text( str(self.delay) )
         self.entry_acq_time.set_text( str(self.acq_time) )
 
-        self.filechooser_histo.set_filename(self.histo_folder)
-
+        self.filechooser_histo.set_current_folder(self.histo_folder)
+        
         for i in range(0, const.DET_NUM):
             self.entry_en_range[i].set_text( str(self.en_range[i])[1:-1] )
 
