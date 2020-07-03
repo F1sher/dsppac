@@ -8,22 +8,24 @@ class _const:
         self.TXT_EDITOR = "gedit"
 
         self.STUFF_FOLDER = "./"
-        self.MAIN_PROG_FOLDER = path.split(path.split(path.realpath(__file__))[0])[0] + "/" #should be smth like "/home/das/job/dsp/"
-        print(self.MAIN_PROG_FOLDER)
+        self.MAIN_PROG_FOLDER = path.split(path.split(path.realpath(__file__))[0])[0] + "/" #should be smth like "/home/das/job/dsppac/"
+        print("main prog folder = ", self.MAIN_PROG_FOLDER)
         self.UI_FOLDER = "ui/"
         self.FPGA_PROG = "send_comm"
         
         self.HDRAINER_EXE = "hdrainer"
         self.ONLINE_EXE = "oconsumer"
         
-        self.HISTO_FOLDER = path.join(self.MAIN_PROG_FOLDER, "test/spectra/")
-        self.DEFAULT_CURR_HISTO_FOLDER = path.join(self.HISTO_FOLDER, "apr14_4det_porog=90_delay=100_coinc_10h_night/")
+        self.HISTO_FOLDER = path.join(self.MAIN_PROG_FOLDER, "spectra/")
+        self.DEFAULT_CURR_HISTO_FOLDER = path.join(self.HISTO_FOLDER, "zero_spk/")
 
         self.SOCKET_COMMUNICATION_FILE = "./hidden"
         self.CFG_FILE = "cfg.json"
         self.CONSTANTS_FILE = "constants.json"
 
-        self.PYPAC_PROG_FOLDER = "/home/das/job/pypac/"
+        top_dir = path.split(path.split(path.split(path.realpath(__file__))[0])[0])[0]
+        self.PYPAC_PROG_FOLDER = path.join(top_dir, "pypac/")
+        print("pypac prog folder = ", self.PYPAC_PROG_FOLDER)
         self.PYPAC_PROG_NAME = "rw.py"
         
         self.SLEEP_S_SOCK_READ = 1
