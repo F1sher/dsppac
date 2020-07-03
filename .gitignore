@@ -1,8 +1,7 @@
 test/*
 journal.log
 ui/__*
-ui/*~
 unity/*
-build/*~
 main_test_1.c
 build/main_test_1
+*~
