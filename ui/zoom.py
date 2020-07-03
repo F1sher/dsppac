@@ -17,7 +17,6 @@ class Zoom():
         self.en_magn = zoom_args["en_magnification"]
         self.en_v_step = zoom_args["en_v_step"]
         self.en_h_step = zoom_args["en_h_step"]
-        
         self.t_magn = zoom_args["t_magnification"]
         self.t_v_step = zoom_args["t_v_step"]
         self.t_h_step = zoom_args["t_h_step"]
@@ -214,6 +213,46 @@ class Zoom():
             self.t_axes[i].set_xlim(x_l, x_r)
             self.t_fig[i].canvas.draw()
 
+    def t_x_move_l(self):
+        for i in range(0, 12):
+            x_l, x_r = self.t_axes[i].get_xlim()
+
+            h_step = self.__calc_h_step(x_l, x_r)
+            x_l += h_step
+            x_r += h_step
+
+            self.t_axes[i].set_xlim(x_l, x_r)
+            self.t_fig[i].canvas.draw()
+            
+    def t_x_move_r(self):
+        for i in range(0, 12):
+            x_l, x_r = self.t_axes[i].get_xlim()
+
+            h_step = self.__calc_h_step(x_l, x_r)
+            x_l -= h_step
+            x_r -= h_step
+
+            self.t_axes[i].set_xlim(x_l, x_r)
+            self.t_fig[i].canvas.draw()
+
+    def t_y_up(self):
+        for i in range(0, 12):
+            y_bot, y_top = self.t_axes[i].get_ylim()
+            y_top -= self.t_v_step
+            y_bot = -1
+
+            self.t_axes[i].set_ylim(y_bot, y_top)
+            self.t_fig[i].canvas.draw()
+    
+    def t_y_down(self):
+        for i in range(0, 12):
+            y_bot, y_top = self.t_axes[i].get_ylim()
+            y_top += self.t_v_step
+            y_bot = -1
+
+            self.t_axes[i].set_ylim(y_bot, y_top)
+            self.t_fig[i].canvas.draw()
+            
     def t_log(self):
         line = [0] * 12
         data_y = [0] * 12

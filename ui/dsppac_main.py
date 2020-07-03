@@ -72,6 +72,10 @@ class UI():
 
             "zoom_t_shrink": self.z_t_shrink,
             "zoom_t_squeeze": self.z_t_squeeze,
+            "zoom_t_left": self.z_t_left,
+            "zoom_t_right": self.z_t_right,
+            "zoom_t_down": self.z_t_down,
+            "zoom_t_up": self.z_t_up,
             "zoom_t_log": self.z_t_log
         }
         self.builder.connect_signals(handlers)
@@ -489,6 +493,18 @@ class UI():
         print("z_t_squeeze")
         self.zoom.t_x_squeeze()
 
+    def z_t_left(self, *args):
+        self.zoom.t_x_move_l()
+
+    def z_t_right(self, *args):
+        self.zoom.t_x_move_r()
+
+    def z_t_up(self, *args):
+        self.zoom.t_y_up()
+
+    def z_t_down(self, *args):
+        self.zoom.t_y_down()
+        
     def z_t_log(self, *args):
         print("z_t_log")
         self.zoom.t_log()

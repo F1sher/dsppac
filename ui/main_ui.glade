@@ -32,6 +32,16 @@
     <property name="can_focus">False</property>
     <property name="stock">gtk-zoom-100</property>
   </object>
+  <object class="GtkImage" id="image15">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-zoom-in</property>
+  </object>
+  <object class="GtkImage" id="image16">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-zoom-out</property>
+  </object>
   <object class="GtkImage" id="image2">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -309,10 +319,13 @@
                     <property name="column_homogeneous">True</property>
                     <child>
                       <object class="GtkButton" id="t_x_zoom_btn">
-                        <property name="label" translatable="yes">&lt; - &gt;</property>
+                        <property name="label" translatable="yes">Stretch</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
+                        <property name="image">image15</property>
+                        <property name="image_position">top</property>
+                        <property name="always_show_image">True</property>
                         <signal name="clicked" handler="zoom_t_shrink" swapped="no"/>
                       </object>
                       <packing>
@@ -330,6 +343,7 @@
                         <property name="xalign">0.50999999046325684</property>
                         <property name="image_position">top</property>
                         <property name="always_show_image">True</property>
+                        <signal name="clicked" handler="zoom_t_right" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left_attach">4</property>
@@ -338,11 +352,14 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="t_x_unzoom_btn">
-                        <property name="label" translatable="yes">&gt; &lt;</property>
+                        <property name="label" translatable="yes">Squeeze</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
+                        <property name="image">image16</property>
                         <property name="yalign">0.49000000953674316</property>
+                        <property name="image_position">top</property>
+                        <property name="always_show_image">True</property>
                         <signal name="clicked" handler="zoom_t_squeeze" swapped="no"/>
                       </object>
                       <packing>
@@ -359,6 +376,7 @@
                         <property name="image">image8</property>
                         <property name="image_position">top</property>
                         <property name="always_show_image">True</property>
+                        <signal name="clicked" handler="zoom_t_left" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left_attach">3</property>
@@ -387,6 +405,7 @@
                         <property name="image">image10</property>
                         <property name="image_position">top</property>
                         <property name="always_show_image">True</property>
+                        <signal name="clicked" handler="zoom_t_up" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left_attach">2</property>
@@ -402,6 +421,7 @@
                         <property name="image">image11</property>
                         <property name="image_position">top</property>
                         <property name="always_show_image">True</property>
+                        <signal name="clicked" handler="zoom_t_down" swapped="no"/>
                       </object>
                       <packing>
                         <property name="left_attach">3</property>
