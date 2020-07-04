@@ -22,9 +22,15 @@
 
 #include <libusb-1.0/libusb.h>
 #include <cyusb.h>
+#include <sclog4c/sclog4c.h>
 
-#include "sclog4c/sclog4c.h"
-
+//defines to work with cyusb_linux 1.0.5
+typedef libusb_device_handle cyusb_handle;
+#define cyusb_kernel_driver_active libusb_kernel_driver_active
+#define cyusb_claim_interface libusb_claim_interface
+#define cyusb_clear_halt libusb_clear_halt
+#define cyusb_bulk_transfer libusb_bulk_transfer
+#define cyusb_control_transfer libusb_control_transfer
 
 typedef struct {
 	double en;
