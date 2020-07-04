@@ -5,6 +5,7 @@
 #include <zmq.h>
 
 #include "dsp.h"
+#define JSMN_HEADER
 #include "parse_args.h"
 
 const int TIMER_ALARM_S = 1;

@@ -1,4 +1,5 @@
 #include "dsp.h"
+#define JSMN_HEADER
 #include "parse_args.h"
 
 int main(int argc, char **argv)
