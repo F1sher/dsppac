@@ -2,7 +2,7 @@ CC=g++
 CFLAGS=-g -Wall -O0
 LFLAGS=-L ./lib/
 IFLAGS=-I/usr/local/include -I./sclog4c/include
-LIBS=-lcyusb -lusb-1.0 -lm -ljsmn
+LIBS=-lcyusb -lusb-1.0 -lm
 DEPS=../dsp.h ../dsp.c ../parse_args.h ../parse_args.c
 SRCS=../dsp.c ../parse_args.c
 
