@@ -9,7 +9,6 @@
 #include <unistd.h>
 
 #include "dsp.h"
-#define JSMN_HEADER
 #include "jsmn.h"
 
 typedef struct {
