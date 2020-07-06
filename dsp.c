@@ -20,10 +20,10 @@ double T_SCALE[2] = {100.0, 10.0};
 const int EN_THRESHOLD = 10;
 
 double Tau_trap = 0.95;
-unsigned int K_trap = 2;
-unsigned int L_trap = 12;
-unsigned int I_MIN_S_SHIFT_trap = 5;
-unsigned int AVERAGE_trap = 10;
+int K_trap = 2;
+int L_trap = 12;
+int I_MIN_S_SHIFT_trap = 5;
+int AVERAGE_trap = 10;
 int INTEGRAL_steps_back = 10;
 int INTEGRAL_steps_forw = 20;
 double EN_normal = 4096.0/2000.0;
@@ -31,9 +31,9 @@ double CFT_fraction = 0.4;
 
 static int flag_fifo_wr = 1;
 
-const char *FIFO_FOLDERNAME = "/home/das/job/dsp/fifos";
-const char *DOWNLOAD_FX2_PATH = "/home/das/Загрузки/cyusb_linux_1.0.4/src/download_fx2";
-const char *USB_CNTRL_FRMWR_PATH = "/home/das/job/plis/512x4.hex";
+const char *FIFO_FOLDERNAME = "/home/vukap/VUKAP/dsppac/fifos";
+const char *DOWNLOAD_FX2_PATH = "/home/vukap/VUKAP/cyusb_linux/src/download_fx2";
+const char *USB_CNTRL_FRMWR_PATH = "/home/vukap/VUKAP/dsppac/firmwares/512x4.hex";
 
 
 int init_controller(cyusb_handle **usb_h)
@@ -430,7 +430,7 @@ double area_trap_signal(int *a)
     for (i = 1; i < SIZEOF_SIGNAL/2; i++) {
         cTr[i] = cTr[i-1] + a_clear[i] - a_clear[i-1]*(1.0 - 1.0/Tau_trap);
     }
-    
+
     for (i = 1; i < SIZEOF_SIGNAL/2; i++) {
         if (i - L_trap - K_trap >= 0) {
             cs[i] = cs[i-1] + cTr[i] - cTr[i-K_trap] - cTr[i-L_trap] + cTr[i-K_trap-L_trap];
@@ -445,7 +445,7 @@ double area_trap_signal(int *a)
             cs[i] = cs[i-1] + cTr[i];
         }
     }
-    
+
     for (i = 1; i < SIZEOF_SIGNAL/2; i++) {
 	    if (a[i] <= 0.995*a[i-1]) {
 		    i_min_s = i + K_trap + I_MIN_S_SHIFT_trap; //+3 or +7
@@ -453,7 +453,7 @@ double area_trap_signal(int *a)
 			break;
         }
     }
-    
+
     if (i_min_s + L_trap - K_trap > SIZEOF_SIGNAL - 1) {		
 		free(a_clear); a_clear = NULL;
 		free(cTr); cTr = NULL;
@@ -461,7 +461,7 @@ double area_trap_signal(int *a)
 
 	    return 0.0;
     }
-    
+
     for (i = i_min_s; i < i_min_s + (int)AVERAGE_trap; i++) { //i<i_min_s + L - K - 1 or 8 - 1
 		res += cs[i];
     }

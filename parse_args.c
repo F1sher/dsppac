@@ -1,6 +1,6 @@
 #include "parse_args.h"
 
-static const char *out_foldername_default = "/home/das/job/dsp/test/histos/";
+static const char *out_foldername_default = "/home/vukap/VUKAP/dsppac/spectra/";
 
 const char *parse_and_give_comm(int argc, char **argv, cyusb_handle *usb_h, int *with_signal_flag, unsigned int *time, int en_range[][4])
 {
@@ -249,7 +249,7 @@ int const_parser(const char *const_filename, const_t *const_params)
             SET_PARAM_INT(K_trap);
             i++;
         }
-        else if (json_equal(const_data, &t[i], "L_trap") == 0) {
+        else if (json_equal(const_data, &t[i], "  L_trap") == 0) {
             SET_PARAM_INT(L_trap);
             i++;
         }

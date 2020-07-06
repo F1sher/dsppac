@@ -56,10 +56,10 @@ extern const int DET_NUM;
 
 extern double EN_normal;
 extern double Tau_trap;
-extern unsigned int K_trap;
-extern unsigned int L_trap;
-extern unsigned int I_MIN_S_SHIFT_trap;
-extern unsigned int AVERAGE_trap;
+extern int K_trap;
+extern int L_trap;
+extern int I_MIN_S_SHIFT_trap;
+extern int AVERAGE_trap;
 extern int INTEGRAL_steps_back;
 extern int INTEGRAL_steps_forw;
 

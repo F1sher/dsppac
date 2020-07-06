@@ -16,9 +16,9 @@ volatile int zmq_read_flag = 0;
 unsigned int time_acq = 100;
 
 static unsigned long int cycles = 0;
-const char *CONST_file_path = "/home/das/job/dsp/constants.json";
-const char *HDrainer_res_file = "/home/das/job/dsp/test/hdrainer_res.sgnl";
-const char *EBE_file_path = "/home/das/job/event-by-event.out";
+const char *CONST_file_path = "/home/vukap/VUKAP/dsppac/constants.json";
+const char *HDrainer_res_file = "/home/vukap/VUKAP/dsppac/spectra/hdrainer_res.sgnl";
+const char *EBE_file_path = "/home/vukap/VUKAP/dsppac/spectra/event-by-event.out";
 int en_range[4][4] = {{600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}, {600, 700, 600, 700}};
 double t_scale[2] = {100.0, 10.0};
 
@@ -301,7 +301,7 @@ int main(int argc, char **argv)
 	}
 
 #ifdef DEBUG
-	FILE *out_buf_log = fopen("/home/das/job/output_hdrainer.txt", "w+");
+	FILE *out_buf_log = fopen("/home/vukap/VUKAP/dsppac/output_hdrainer.txt", "w+");
 #endif
 
 	//set timer alarm and its handler
@@ -369,6 +369,7 @@ int main(int argc, char **argv)
 		}
 #ifdef DEBUG
 		//logm(SL4C_INFO, "data was read from ep\n");
+		//printf("data was read from ep\n");
 #endif
 
 		get_det_counts(data, intens, 0);
@@ -393,7 +394,7 @@ int main(int argc, char **argv)
 
 			counter_events = 0;
 		}
-
+		
 		if (zmq_read_flag) {
 			zmq_read_flag = 0;
 			//write to socket and check result
@@ -418,21 +419,21 @@ int main(int argc, char **argv)
 			u_seconds = timeval_curr_time.tv_usec;
 
 			zmq_send(zmq_publisher, buf, sizeof(buf), 0);
-
+			
 #ifdef DEBUG
 			print_buf(out_buf_log, buf);
 #endif
 		}
 
 		if (counter_events + 4 < CALC_SIZE) {
-			for (i = 0; i < 4; i++) { 
-				res = calc_en_t(data[i], events[counter_events + i], area_trap_signal, time_cubic_signal);
+			for (i = 0; i < 4; i++) {
+				res = calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
 				#ifdef DEBUG
 				if (res != 0) {
-					printf("calc_en_t() return %d\n", res);
+				  	printf("calc_en_t() return %d\n", res);
 				}
 				if (fabs(events[counter_events + i]->t + 1.0) < 0.1e-06) {
-					printf("-1 time line | %d\n", counter_events + i);
+				  	printf("-1 time line | %d\n", counter_events + i);
 				}
 				#endif
 			}
