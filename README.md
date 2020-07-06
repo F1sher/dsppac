@@ -1,7 +1,7 @@
 # dsppac program for VUKAP spectrometer
 
 Эта программа предназначена для накопления энергетических и временных
-спектров на спектрометре VUKAP version 1.0
+спектров на спектрометре VUKAP 1.0
 
 ## Getting Started
 
@@ -21,15 +21,18 @@ libusb-1.0-0
 libusb-1.0-0-dev
 libczmq-dev
 cyusb
+qt5-default
+qt5-make
 ```
 
 For the Python part:
 ```
-python3
-numpy
-scipy
-matplotlib
-pyzmq
+python==3.7.3
+numpy==1.16.4
+matplotlib==3.1.0
+scipy==1.3.0
+PyGObject==3.32.2
+pyzmq-19.0???
 gedit
 ```
 
@@ -44,7 +47,7 @@ sudo apt install build-essential libgsl-dev libusb-1.0-0 libusb-1.0-0-dev libczm
 
 - Install cyusb
 ```
-sudo apt install git qt5-qmake
+sudo apt install git qt5-default qt5-qmake
 git clone https://github.com/Ho-Ro/cyusb_linux.git ~/VUKAP
 cd ~/VUKAP/cyusb_linux
 sudo mkdir -p /etc/udev/rules.d
@@ -56,11 +59,21 @@ sudo cp ./lib/libcyusb.so /usr/local/lib/
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 ```
 
+Now you can run cyusb_linux with command (from any dir):
+```
+cyusb
+```
+
+- Clone the repo:
+```
+git clone https://github.com/F1sher/dsppac.git ~/VUKAP
+```
+
 - Install sclog4c
 ```
 sudo mkdir /usr/local/lib/sclog4c/
 sudo mkdir /usr/local/include/sclog4c/
-cp ~/VUKAP/dsppac/build/sclog4c/src
+cd ~/VUKAP/dsppac/build/sclog4c/src
 make clean
 make
 sudo cp libsclog4c.a /usr/local/lib/sclog4c/
@@ -69,7 +82,6 @@ sudo cp ../include/sclog4c.h /usr/local/include/sclog4c/
 
 - Compile hdrainer
 ```
-git clone https://github.com/F1sher/dsppac.git ~/VUKAP
 cd ~/VUKAP/build
 
 copy cyusb.h to include
@@ -84,5 +96,24 @@ cyusb_control_transfer -> libusb_control_transfer
 paste "#define JSMN_HEADER" in send_comm.c, hdrainer.c before #include "parse_args.h"
 
 make sclog4c in Makefile? -> install sclog4c to /usr and now in dsp.h #include <sclog4c/sclog4c.h>
+
 make hdrainer
+```
+
+- Install dsppac gui
+```
+sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+pip install numpy==1.16.4 matplotlib==3.1.0 scipy==1.3.0 PyGObject==3.32.2
+```
+
+To run dsppac from any dir add to your .bash_profile
+```
+export PATH=$PATH:~/VUKAP/dsppac/ui
+```
+
+Now you can run dsppac gui with command:
+```
+dsppac_main.py
 ```
