@@ -17,13 +17,15 @@ class _const:
         self.ONLINE_EXE = "oconsumer"
         
         self.HISTO_FOLDER = path.join(self.MAIN_PROG_FOLDER, "spectra/")
-        self.DEFAULT_CURR_HISTO_FOLDER = path.join(self.HISTO_FOLDER, "zero_spk/")
+        self.DEFAULT_CURR_HISTO_FOLDER = path.join(self.HISTO_FOLDER, "zero_spk")
 
         self.SOCKET_COMMUNICATION_FILE = "./hidden"
         self.CFG_FILE = "cfg.json"
         self.CONSTANTS_FILE = "constants.json"
 
         top_dir = path.split(path.split(path.split(path.realpath(__file__))[0])[0])[0]
+        self.HISTOPAC_PROG_FOLDER = path.join(top_dir, "histopac/")
+        self.HISTOPAC_PROG_NAME = "histopac.py"
         self.PYPAC_PROG_FOLDER = path.join(top_dir, "pypac/")
         print("pypac prog folder = ", self.PYPAC_PROG_FOLDER)
         self.PYPAC_PROG_NAME = "rw.py"

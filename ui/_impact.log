@@ -1,0 +1,100 @@
+iMPACT Version: 
+iMPACT log file Started on Mon Jul  6 18:52:26 2020
+
+// *** BATCH CMD : setPreference -pref AutoSignature:FALSE
+// *** BATCH CMD : setPreference -pref KeepSVF:FALSE
+// *** BATCH CMD : setPreference -pref ConcurrentMode:FALSE
+// *** BATCH CMD : setPreference -pref UseHighz:FALSE
+// *** BATCH CMD : setPreference -pref svfUseTime:FALSE
+// *** BATCH CMD : setMode -bs
+// *** BATCH CMD : setMode -bs
+GUI --- Auto connect to cable...
+// *** BATCH CMD : setCable -port auto
+AutoDetecting cable. Please wait.
+PROGRESS_START - Starting Operation.
+Connecting to cable (Parallel Port - parport0).
+ libusb-driver.so version: 2020-05-31 11:27:37.
+Cable connection failed.
+Connecting to cable (Parallel Port - parport1).
+ libusb-driver.so version: 2020-05-31 11:27:37.
+Cable connection failed.
+Connecting to cable (Parallel Port - parport2).
+ libusb-driver.so version: 2020-05-31 11:27:37.
+Cable connection failed.
+Connecting to cable (Parallel Port - parport3).
+ libusb-driver.so version: 2020-05-31 11:27:37.
+Cable connection failed.
+Connecting to cable (Usb Port - USB21).
+Checking cable driver.
+File version of /home/vukap/VUKAP/xilinx_soft/bin/lin/xusbdfwu.hex = 1021(dec),03FD.
+File version of /etc/hotplug/usb/xusbdfwu.fw/xusbdfwu.hex = 1021(dec), 03FD.
+ Cable PID = 0008.
+ Max current requested during enumeration is 74 mA.
+ Cable Type = 3, Revision = 0.
+ Setting cable speed to 6 MHz.
+Cable connection established.
+Firmware version = 1028.
+CPLD file version = 0012h.
+CPLD version = 0012h.
+PROGRESS_END - End Operation.
+Elapsed time =      1 sec.
+Attempting to identify devices in the boundary-scan chain configuration...// *** BATCH CMD : Identify 
+PROGRESS_START - Starting Operation.
+Identifying chain contents ....'1': : Manufacturer's ID =Xilinx xc4vfx20, Version : 6
+INFO:iMPACT:1777 - 
+   Reading /home/vukap/VUKAP/xilinx_soft/virtex4/data/xc4vfx20.bsd...
+INFO:iMPACT:501 - '1': Added Device xc4vfx20 successfully.
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+done.
+Chain TCK freq = 33000000.
+Validating chain...
+Boundary-scan chain validated successfully.
+PROGRESS_END - End Operation.
+Elapsed time =      0 sec.
+// *** BATCH CMD : identifyMPM 
+// *** BATCH CMD : setMode -bs
+1. Initializing V2Pro File...
+2. Initializing V2Pro File...
+// *** BATCH CMD : addDevice -p 1 -file"/home/vukap/VUKAP/dsppac/firmwares/ezusb1_wakeup_newAD.bit"
+'1': Loading file '/home/vukap/VUKAP/dsppac/firmwares/ezusb1_wakeup_newAD.bit'...
+done.
+INFO:iMPACT:501 - '1': Added Device xc4vfx20 successfully.
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+// *** BATCH CMD : deleteDevice -position 2
+----------------------------------------------------------------------
+// *** BATCH CMD : Program -p 1 -s -defaultVersion 0 
+PROGRESS_START - Starting Operation.
+Chain TCK freq = 33000000.
+Validating chain...
+Boundary-scan chain validated successfully.
+'1': Entering secure mode...done.
+'1':Programming  device...
+done.
+'1': Reading status register contents...
+CRC error                                         :         0
+Decryptor security set                            :         0
+DCM locked                                        :         1
+DCI matched                                       :         1
+End of startup signal from Startup block          :         1
+status of GTS_CFG_B                               :         1
+status of GWE                                     :         1
+status of GHIGH                                   :         1
+value of MODE pin M0                              :         1
+value of MODE pin M1                              :         0
+Value of MODE pin M2                              :         1
+Internal signal indicates when housecleaning is completed:         1
+Value driver in from INIT pad                     :         1
+Internal signal indicates that chip is configured :         1
+Value of DONE pin                                 :         1
+Indicates when ID value written does not match chip ID:         0
+Decryptor error Signal                            :         0
+System Monitor Over-Temperature Alarm             :         0
+INFO:iMPACT:2219 - Status register values:
+INFO:iMPACT - 0011 1111 1011 1110 0000 0000 0000 0000 
+INFO:iMPACT:579 - '1': Completed downloading bit file to device.
+INFO:iMPACT:580 - '1':Checking done pin ....done.
+'1': Programmed successfully.
+PROGRESS_END - End Operation.
+Elapsed time =      2 sec.

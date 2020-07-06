@@ -10,7 +10,7 @@ SRCS=../dsp.c ../parse_args.c
 UNITY_SRC=../unity/unity.c
 
 hdrainer: $(DEPS) ../hdrainer.c send_comm
-	$(CC) -o $@ ../hdrainer.c $(SRCS) ./sclog4c/src/libsclog4c.a $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lzmq -lgsl -lgslcblas -DDEBUG 
+	$(CC) -o $@ ../hdrainer.c $(SRCS) ./sclog4c/src/libsclog4c.a $(LFLAGS) $(IFLAGS) $(LIBS) $(CFLAGS) -lzmq -lgsl -lgslcblas -DDEBUG
 
 oconsumer: $(DEPS) ../oconsumer.c
 	$(CC) -o $@ ../oconsumer.c $(SRCS) $(LFLAGS) $(LIBS) $(CFLAGS)

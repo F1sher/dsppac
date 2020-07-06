@@ -1,7 +1,7 @@
 {
 	"EN_normal": 50000.0,
 	"K_trap": 2,
-	"L_trap": 12,
+	"L_trap": 13,
 	"Tau_trap": 0.85,
 	"AVERAGE_trap": 7,
 	"I_MIN_S_SHIFT_trap": 4,

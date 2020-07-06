@@ -25,6 +25,7 @@ from socket import SOCK_STREAM
 from socket import SOCK_DGRAM
 
 from struct import unpack, pack
+from struct import calcsize as struct_calcsize
 from struct import error as struct_error
 
 from subprocess import call as subprocess_call
@@ -303,9 +304,11 @@ class UI():
 
     def run_histopac(self, *args):
         self.logger.info("Run histopac")
+        histopac_exe = path.join(const.HISTOPAC_PROG_FOLDER, const.HISTOPAC_PROG_NAME)
         from os import chdir
-        chdir("/home/dasalam/job/histopac/")
-        system("{:s} {:s}".format("/home/dasalam/job/histopac/histopac.py", self.curr_histo_folder))
+        chdir(const.HISTOPAC_PROG_FOLDER)
+        system("{:s} {:s}".format(histopac_exe, self.curr_histo_folder))
+
 
     def run_anizpac(self, *args):
         self.logger.info("Run anizpac")
@@ -330,10 +333,11 @@ class UI():
                 None
 
         if signal_file is not None:
-            system("{:s} -i {:s}".format(const.PYPAC_PROG_FOLDER + const.PYPAC_PROG_NAME, signal_file))
+            pypac_exe = path.join(const.PYPAC_PROG_FOLDER, const.PYPAC_PROG_NAME)
+            system("{:s} -i {:s}".format(pypac_exe, signal_file))
         else:
-            text = "There are no signal files in current histo folder: {:s}", self.curr_histo_folder 
-            self.statusbar_push(self, "error", err_msg=text)
+            text = "There are no signal files in current histo folder: {:s}".format(self.curr_histo_folder)
+            self.statusbar_push("error", err_msg=text)
             print("!Error: " + text)
         
     def run_pypac_histo(self, *args):
@@ -912,12 +916,12 @@ class Hdrainer():
             counts_curr = [-1, -1, -1, -1]
             
             import zmq
-            
+
             context = zmq.Context()
             zmq_subscriber = context.socket(zmq.SUB)
             zmq_subscriber.connect("tcp://localhost:5556")
             zmq_subscriber.setsockopt(zmq.SUBSCRIBE, b"")
-
+            
             while True:
                 w_pid, ret = os.waitpid(pid, os.WNOHANG)
                 if w_pid == pid:
@@ -935,10 +939,12 @@ class Hdrainer():
                 #Count intensity and execution time
                 #remove exe_m_time since exe_time in microseconds!
                 try:
-                    cycles, exe_time, *counts, exe_m_time = unpack("=7l", out_str)
+                    counts = 4 * [0]
+                    cycles, exe_time, counts[0], counts[1], counts[2], counts[3], exe_m_time = unpack("@7L", out_str)
                 except struct_error:
                     #End of *DRAINER should be OR syncro problems
                     print("STRUCT UNPACK ERROR | out_str = {} (len={})".format(out_str, len(out_str)))
+                    print("msg size should be = {}".format(struct_calcsize("@7L")))
                     cycles = 0
                     exe_time = 0
                     counts = [0, 0, 0, 0]
