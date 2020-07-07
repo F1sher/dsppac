@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.22.1 -->
+<!-- Generated with glade 3.22.2 -->
 <interface>
   <requires lib="gtk+" version="3.10"/>
   <object class="GtkImage" id="image1">
@@ -85,9 +85,10 @@
   <object class="GtkWindow" id="main_win">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">VUKAP - dsppac</property>
-    <property name="icon_name">spectrometer_icon</property>
+    <property name="window_position">center</property>
+    <property name="icon_name">utilities-system-monitor</property>
     <signal name="delete-event" handler="on_quit" swapped="no"/>
-    <child>
+    <child type="titlebar">
       <placeholder/>
     </child>
     <child>
@@ -316,7 +317,6 @@
                   <object class="GtkGrid" id="t_grid">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="column_homogeneous">True</property>
                     <child>
                       <object class="GtkButton" id="t_x_zoom_btn">
                         <property name="label" translatable="yes">Stretch</property>
@@ -329,7 +329,7 @@
                         <signal name="clicked" handler="zoom_t_shrink" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">1</property>
+                        <property name="left_attach">0</property>
                         <property name="top_attach">1</property>
                       </packing>
                     </child>
@@ -340,13 +340,12 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="image">image9</property>
-                        <property name="xalign">0.50999999046325684</property>
                         <property name="image_position">top</property>
                         <property name="always_show_image">True</property>
                         <signal name="clicked" handler="zoom_t_right" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">4</property>
+                        <property name="left_attach">3</property>
                         <property name="top_attach">1</property>
                       </packing>
                     </child>
@@ -357,13 +356,12 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="image">image16</property>
-                        <property name="yalign">0.49000000953674316</property>
                         <property name="image_position">top</property>
                         <property name="always_show_image">True</property>
                         <signal name="clicked" handler="zoom_t_squeeze" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">2</property>
+                        <property name="left_attach">1</property>
                         <property name="top_attach">1</property>
                       </packing>
                     </child>
@@ -379,7 +377,7 @@
                         <signal name="clicked" handler="zoom_t_left" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">3</property>
+                        <property name="left_attach">2</property>
                         <property name="top_attach">1</property>
                       </packing>
                     </child>
@@ -392,7 +390,7 @@
                         <signal name="clicked" handler="zoom_t_log" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">1</property>
+                        <property name="left_attach">0</property>
                         <property name="top_attach">2</property>
                       </packing>
                     </child>
@@ -408,7 +406,7 @@
                         <signal name="clicked" handler="zoom_t_up" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">2</property>
+                        <property name="left_attach">1</property>
                         <property name="top_attach">2</property>
                       </packing>
                     </child>
@@ -424,7 +422,7 @@
                         <signal name="clicked" handler="zoom_t_down" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">3</property>
+                        <property name="left_attach">2</property>
                         <property name="top_attach">2</property>
                       </packing>
                     </child>
@@ -438,7 +436,7 @@
                         </attributes>
                       </object>
                       <packing>
-                        <property name="left_attach">1</property>
+                        <property name="left_attach">0</property>
                         <property name="top_attach">0</property>
                         <property name="width">4</property>
                       </packing>
@@ -454,24 +452,9 @@
                         <property name="always_show_image">True</property>
                       </object>
                       <packing>
-                        <property name="left_attach">4</property>
+                        <property name="left_attach">3</property>
                         <property name="top_attach">2</property>
                       </packing>
-                    </child>
-                    <child>
-                      <object class="GtkSeparator">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="halign">center</property>
-                      </object>
-                      <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">1</property>
-                        <property name="height">2</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <placeholder/>
                     </child>
                   </object>
                   <packing>
@@ -542,13 +525,14 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="hexpand">False</property>
+                        <property name="pixels_above_lines">7</property>
                         <property name="editable">False</property>
                         <property name="wrap_mode">char</property>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="top_attach">0</property>
-                        <property name="width">3</property>
+                        <property name="width">5</property>
                         <property name="height">6</property>
                       </packing>
                     </child>
@@ -569,7 +553,6 @@
                   <object class="GtkGrid" id="en_grid">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="column_homogeneous">True</property>
                     <child>
                       <object class="GtkLabel" id="lbl_en_spk">
                         <property name="visible">True</property>
@@ -580,7 +563,7 @@
                         </attributes>
                       </object>
                       <packing>
-                        <property name="left_attach">1</property>
+                        <property name="left_attach">0</property>
                         <property name="top_attach">0</property>
                         <property name="width">4</property>
                       </packing>
@@ -597,7 +580,7 @@
                         <signal name="clicked" handler="zoom_en_shrink" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">1</property>
+                        <property name="left_attach">0</property>
                         <property name="top_attach">1</property>
                       </packing>
                     </child>
@@ -613,7 +596,7 @@
                         <signal name="clicked" handler="zoom_en_squeeze" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">2</property>
+                        <property name="left_attach">1</property>
                         <property name="top_attach">1</property>
                       </packing>
                     </child>
@@ -629,7 +612,7 @@
                         <signal name="clicked" handler="zoom_en_left" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">3</property>
+                        <property name="left_attach">2</property>
                         <property name="top_attach">1</property>
                       </packing>
                     </child>
@@ -645,7 +628,7 @@
                         <signal name="clicked" handler="zoom_en_right" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">4</property>
+                        <property name="left_attach">3</property>
                         <property name="top_attach">1</property>
                       </packing>
                     </child>
@@ -658,7 +641,7 @@
                         <signal name="clicked" handler="zoom_en_log" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">1</property>
+                        <property name="left_attach">0</property>
                         <property name="top_attach">2</property>
                       </packing>
                     </child>
@@ -674,7 +657,7 @@
                         <signal name="clicked" handler="zoom_en_up" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">2</property>
+                        <property name="left_attach">1</property>
                         <property name="top_attach">2</property>
                       </packing>
                     </child>
@@ -690,7 +673,7 @@
                         <signal name="clicked" handler="zoom_en_down" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">3</property>
+                        <property name="left_attach">2</property>
                         <property name="top_attach">2</property>
                       </packing>
                     </child>
@@ -706,24 +689,9 @@
                         <signal name="clicked" handler="zoom_en_zero" swapped="no"/>
                       </object>
                       <packing>
-                        <property name="left_attach">4</property>
+                        <property name="left_attach">3</property>
                         <property name="top_attach">2</property>
                       </packing>
-                    </child>
-                    <child>
-                      <object class="GtkSeparator">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="halign">center</property>
-                      </object>
-                      <packing>
-                        <property name="left_attach">0</property>
-                        <property name="top_attach">1</property>
-                        <property name="height">2</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <placeholder/>
                     </child>
                   </object>
                   <packing>
@@ -757,7 +725,7 @@
             </child>
           </object>
           <packing>
-            <property name="expand">True</property>
+            <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">1</property>
           </packing>
