@@ -103,8 +103,8 @@ class UI():
         }
         self.zoom = Zoom(self.en_fig, self.t_fig, self.en_axes, self.t_axes, zoom_args)
 
-        self.logger = Logger(const.MAIN_PROG_FOLDER + "journal.log")
-        self.logger.info("Program initialization is ok")
+        self.logger = Logger(path.join(const.MAIN_PROG_FOLDER, "journal.log"))
+        self.logger.info("Program initialization OK")
 
         self.update_counts([0]*4)
 
