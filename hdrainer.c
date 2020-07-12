@@ -84,7 +84,9 @@ void catch_timer(int signum, siginfo_t *info, void *ptr)
 	static unsigned long int timer = 0;
 	timer++;
 
-	if ( (timer % CALC_TIME == 0) ) {
+	if ( (timer % CALC_TIME == 0) || (timer == (long unsigned int)CALC_TIME/5) ) {
+	//if ( (timer % CALC_TIME == 0) ) {
+		printf("setting calc_flag\n");
 		calc_flag = 1;
 	}
 
@@ -430,7 +432,7 @@ int main(int argc, char **argv)
 				res = calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
 				#ifdef DEBUG
 				if (res != 0) {
-				  	printf("calc_en_t() return %d\n", res);
+					printf("calc_en_t() return %d\n", res);
 				}
 				if (fabs(events[counter_events + i]->t + 1.0) < 0.1e-06) {
 				  	printf("-1 time line | %d\n", counter_events + i);
