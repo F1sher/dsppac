@@ -87,7 +87,10 @@ class Information():
         iter_end = self.textbuff.get_iter_at_mark(self.exposline_mark)
         self.textbuff.delete(iter_start, iter_end)
 
-        text = "Expos: {} s".format(tim)
+        if tim < 3600:
+            text = "Expos: {:d} s".format(round(tim))
+        else:
+            text = "Expos: {:d} s ({:.1f} h)".format(round(tim), tim / 3600)
         iter = self.textbuff.get_iter_at_line(EXPOSLINE_NUM)
         self.textbuff.insert_with_tags(iter, text, self.large_tag)
 
@@ -96,7 +99,10 @@ class Information():
         iter_end = self.textbuff.get_iter_at_mark(self.timeline_mark)
         self.textbuff.delete(iter_start, iter_end)
 
-        text = "Time: {:d} s".format(round(tim))
+        if time < 3600:
+            text = "Time: {:d} s".format(round(tim))
+        else:
+            text = "Time: {:d} s ({:.1f} h)".format(round(tim), tim / 3600)
         iter = self.textbuff.get_iter_at_line(TIMELINE_NUM)
         self.textbuff.insert_with_tags(iter, text, self.large_tag)
 
@@ -113,6 +119,7 @@ class Information():
         try:
             self.set_filename(args["name"])
         except KeyError:
+            
             None
 
         try:
