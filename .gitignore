@@ -4,4 +4,7 @@ ui/__*
 unity/*
 main_test_1.c
 build/main_test_1
+build/hdrainer
+build/drainer
 *~
+_*
