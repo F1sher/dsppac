@@ -17,7 +17,7 @@ const int CALC_TIME = 100;
 const int ZMQ_READ_TIME = 2;
 
 double T_SCALE[2] = {100.0, 10.0};
-const int EN_THRESHOLD = 10;
+const int EN_THRESHOLD = 30;
 
 double Tau_trap = 0.95;
 int K_trap = 2;
@@ -454,25 +454,43 @@ double area_trap_signal(int *a)
         }
     }
 
+    /*
+    if (i_min_s != 0) {
+	    printf("i_min_s = %d, L_Trap = %d, K_trap = %d\n", i_min_s, L_trap, K_trap);
+	    for (i = 0; i < 32; i++) {
+		    printf("%d\n", a[i]);
+	    }
+	    for (i = 0; i < 32; i++) {
+		    printf("%.1f\n", cTr[i]);
+	    }
+	    for (i = 0; i < 32; i++) {
+		    printf("%.1f\n", cs[i]);
+	    }
+    }
+    */
+    
     if (i_min_s + L_trap - K_trap > SIZEOF_SIGNAL - 1) {		
-		free(a_clear); a_clear = NULL;
-		free(cTr); cTr = NULL;
-		free(cs); cs = NULL;
+	    free(a_clear); a_clear = NULL;
+	    free(cTr); cTr = NULL;
+	    free(cs); cs = NULL;
 
+	    printf("could not find right i_min_s | i_min_s = %d\n", i_min_s);
+	    
 	    return 0.0;
     }
 
     for (i = i_min_s; i < i_min_s + (int)AVERAGE_trap; i++) { //i<i_min_s + L - K - 1 or 8 - 1
 		res += cs[i];
     }
-    res = res/(AVERAGE_trap); //res = res/(L-K-1) or res/8
+    
+    res = res/((double) AVERAGE_trap); //res = res/(L-K-1) or res/8
 
     free(a_clear); a_clear = NULL;
     free(cTr); cTr = NULL;
     free(cs); cs = NULL;
     
-	//printf("AREA = %.2f | l, r = %d, %d\n", fabs(res*EN_normal), i_min_s, i_min_s + (int)AVERAGE_trap);
-
+    //printf("res = %.2f, AREA = %.2f | l, r = %d, %d\n", res, fabs(res*EN_normal), i_min_s, i_min_s + (int)AVERAGE_trap);
+        
     return fabs(res*EN_normal);
 }
 
