@@ -249,7 +249,7 @@ int const_parser(const char *const_filename, const_t *const_params)
             SET_PARAM_INT(K_trap);
             i++;
         }
-        else if (json_equal(const_data, &t[i], "  L_trap") == 0) {
+        else if (json_equal(const_data, &t[i], "L_trap") == 0) {
             SET_PARAM_INT(L_trap);
             i++;
         }
