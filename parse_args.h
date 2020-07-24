@@ -13,8 +13,8 @@
 
 typedef struct {
     double EN_normal;
-    unsigned int K_trap;
-    unsigned int L_trap;
+    int K_trap;
+    int L_trap;
     double Tau_trap;
 
 	int AVERAGE_trap;
