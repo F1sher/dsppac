@@ -431,6 +431,7 @@ int main(int argc, char **argv)
 			for (i = 0; i < 4; i++) {
 				res = calc_en_t(data[i], events[counter_events + i], area_integral, time_line_signal);
 				#ifdef DEBUG
+				printf("energy = %f\n", events[counter_events + i]->en);
 				if (res != 0) {
 					printf("calc_en_t() return %d\n", res);
 				}
@@ -460,6 +461,8 @@ int main(int argc, char **argv)
 	zmq_send(zmq_publisher, buf, sizeof(buf), 0);
 
 	//Save histo
+	//check!!! next line
+	calc_histo(events, counter_events, en_range, histo_en, start);
 	save_histo_in_file(out_histo_fd, histo_en, start);
 	save_histo_in_ascii(out_foldername, histo_en, start);
 
